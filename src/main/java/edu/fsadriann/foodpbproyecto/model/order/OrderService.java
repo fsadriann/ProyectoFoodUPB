@@ -308,6 +308,86 @@ public class OrderService implements OrderInterface {
         }
     }
 
+    // ── RF-13-C / RF-13-D: Transiciones de estado para entrega ───────────────
+
+    /**
+     * Transición estricta: {@link EstadoPedido#LISTO} → {@link EstadoPedido#EN_CAMINO}.
+     *
+     * @param orderId UUID del pedido
+     * @return {@code true} si la transición fue exitosa; {@code false} si el pedido no existe
+     * @throws IllegalStateException si el estado actual no es LISTO
+     */
+    @Override
+    public boolean marcarEnCamino(String orderId) {
+        if (orderId == null) return false;
+        try {
+            Order pedido = buscarPedido(orderId);
+            if (pedido == null) return false;
+            if (pedido.getEstado() != EstadoPedido.LISTO)
+                throw new IllegalStateException(
+                        "Solo se puede iniciar entrega desde LISTO. Estado actual: "
+                        + pedido.getEstado());
+            pedido.setEstado(EstadoPedido.EN_CAMINO);
+            return actualizar(pedido);
+        } catch (RemoteException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Transición estricta: {@link EstadoPedido#EN_CAMINO} → {@link EstadoPedido#ENTREGADO}.
+     *
+     * @param orderId UUID del pedido
+     * @return {@code true} si la transición fue exitosa; {@code false} si el pedido no existe
+     * @throws IllegalStateException si el estado actual no es EN_CAMINO
+     */
+    @Override
+    public boolean marcarEntregado(String orderId) {
+        if (orderId == null) return false;
+        try {
+            Order pedido = buscarPedido(orderId);
+            if (pedido == null) return false;
+            if (pedido.getEstado() != EstadoPedido.EN_CAMINO)
+                throw new IllegalStateException(
+                        "Solo se puede completar entrega desde EN_CAMINO. Estado actual: "
+                        + pedido.getEstado());
+            pedido.setEstado(EstadoPedido.ENTREGADO);
+            return actualizar(pedido);
+        } catch (RemoteException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Transición estricta: {@link EstadoPedido#EN_PREPARACION} → {@link EstadoPedido#LISTO}.
+     *
+     * <p>Invocado por {@code KitchenService.marcarPedidoListo()} en modo coordinado.
+     * Formaliza el cambio de estado en {@code OrderService} como fuente de verdad central.
+     * En la implementación en memoria, refuerza el estado que {@code KitchenService}
+     * ya aplicó directamente sobre el objeto compartido.
+     * En fases futuras (MongoDB/RMI), este método garantizará la actualización persistente.
+     *
+     * @param orderId UUID del pedido
+     * @return {@code true} si la transición fue exitosa; {@code false} si no existe
+     * @throws IllegalStateException si el estado actual no es EN_PREPARACION
+     */
+    @Override
+    public boolean marcarListo(String orderId) {
+        if (orderId == null) return false;
+        try {
+            Order pedido = buscarPedido(orderId);
+            if (pedido == null) return false;
+            if (pedido.getEstado() != EstadoPedido.EN_PREPARACION)
+                throw new IllegalStateException(
+                        "Solo se puede marcar LISTO desde EN_PREPARACION. Estado actual: "
+                        + pedido.getEstado());
+            pedido.setEstado(EstadoPedido.LISTO);
+            return actualizar(pedido);
+        } catch (RemoteException e) {
+            return false;
+        }
+    }
+
     // ── Helper privado ─────────────────────────────────────────────────────────────
 
     /**

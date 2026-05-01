@@ -450,5 +450,83 @@ class OrderServiceTest {
         assertNull(service.calcularRutaEntrega(o.getOrderId(), csSinBase),
                 "Si UPB no está en el grafo, no se puede calcular ruta");
     }
-}
 
+    // ── RF-13-C: marcarEnCamino ───────────────────────────────────────────────
+
+    @Test
+    @DisplayName("RF-13-C | LISTO → EN_CAMINO exitoso")
+    void marcarEnCamino_desdeListo_exitoso() throws RemoteException {
+        Order o = service.crearPedido(CEDULA, false);
+        o.setEstado(EstadoPedido.LISTO); // simular cocina terminó
+        assertTrue(service.marcarEnCamino(o.getOrderId()));
+        assertEquals(EstadoPedido.EN_CAMINO,
+                service.buscarPedido(o.getOrderId()).getEstado());
+    }
+
+    @Test
+    @DisplayName("RF-13-C | Estado inválido (PENDIENTE) → IllegalStateException")
+    void marcarEnCamino_estadoInvalido_lanzaExcepcion() throws RemoteException {
+        Order o = service.crearPedido(CEDULA, false); // PENDIENTE
+        assertThrows(IllegalStateException.class,
+                () -> service.marcarEnCamino(o.getOrderId()));
+    }
+
+    @Test
+    @DisplayName("RF-13-C | Pedido inexistente → false")
+    void marcarEnCamino_pedidoInexistente_retornaFalse() {
+        assertFalse(service.marcarEnCamino("uuid-inventado"));
+    }
+
+    // ── RF-13-D: marcarEntregado ──────────────────────────────────────────────
+
+    @Test
+    @DisplayName("RF-13-D | EN_CAMINO → ENTREGADO exitoso")
+    void marcarEntregado_desdeEnCamino_exitoso() throws RemoteException {
+        Order o = service.crearPedido(CEDULA, false);
+        o.setEstado(EstadoPedido.EN_CAMINO); // simular en tránsito
+        assertTrue(service.marcarEntregado(o.getOrderId()));
+        assertEquals(EstadoPedido.ENTREGADO,
+                service.buscarPedido(o.getOrderId()).getEstado());
+    }
+
+    @Test
+    @DisplayName("RF-13-D | Estado inválido (LISTO, no EN_CAMINO) → IllegalStateException")
+    void marcarEntregado_estadoInvalido_lanzaExcepcion() throws RemoteException {
+        Order o = service.crearPedido(CEDULA, false);
+        o.setEstado(EstadoPedido.LISTO); // LISTO, no EN_CAMINO
+        assertThrows(IllegalStateException.class,
+                () -> service.marcarEntregado(o.getOrderId()));
+    }
+
+    @Test
+    @DisplayName("RF-13-D | Pedido inexistente → false")
+    void marcarEntregado_pedidoInexistente_retornaFalse() {
+        assertFalse(service.marcarEntregado("uuid-inventado"));
+    }
+
+    // ── A-02: marcarListo ─────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("A-02 | EN_PREPARACION → LISTO exitoso")
+    void marcarListo_desdeEnPreparacion_exitoso() throws RemoteException {
+        Order o = service.crearPedido(CEDULA, false);
+        o.setEstado(EstadoPedido.EN_PREPARACION); // simular asignación a fogón
+        assertTrue(service.marcarListo(o.getOrderId()));
+        assertEquals(EstadoPedido.LISTO,
+                service.buscarPedido(o.getOrderId()).getEstado());
+    }
+
+    @Test
+    @DisplayName("A-02 | Estado inválido (PENDIENTE, no EN_PREPARACION) → IllegalStateException")
+    void marcarListo_estadoInvalido_lanzaExcepcion() throws RemoteException {
+        Order o = service.crearPedido(CEDULA, false); // PENDIENTE
+        assertThrows(IllegalStateException.class,
+                () -> service.marcarListo(o.getOrderId()));
+    }
+
+    @Test
+    @DisplayName("A-02 | Pedido inexistente → false")
+    void marcarListo_pedidoInexistente_retornaFalse() {
+        assertFalse(service.marcarListo("uuid-inventado"));
+    }
+}

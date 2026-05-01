@@ -36,15 +36,49 @@ public class KitchenService implements KitchenInterface {
     /** Cola de prioridad del JAR. */
     private final PriorityQueue<Order> cola;
 
+    /**
+     * Referencia opcional a {@code OrderService} para sincronización de estado. A-02.
+     *
+     * <p>Si es {@code null}: modo legacy — el estado se muta directamente sobre el objeto
+     * compartido (funciona en memoria por identidad de referencia Java).
+     *
+     * <p>Si no es {@code null}: modo coordinado — además de la mutación directa,
+     * se llama a {@code orderService.marcarListo()} para formalizar el cambio en
+     * la fuente de verdad central. Obligatorio con MongoDB o RMI en fases futuras.
+     */
+    private final OrderService orderService;
+
+    // ── Constructores ─────────────────────────────────────────────────────────────
+
+    /**
+     * Constructor legacy (backward compatible). Sin coordinación formal con {@code OrderService}.
+     * Funciona correctamente en memoria por identidad de referencia Java.
+     * Todos los tests existentes de RF-05 usan este constructor.
+     */
+    public KitchenService() {
+        this(null);
+    }
+
+    /**
+     * Constructor coordinado. {@code KitchenService} sincronizará los cambios de estado
+     * con {@code orderService.marcarListo()} en cada llamada a {@link #marcarPedidoListo}.
+     *
+     * <p>Usar en integración real (Swing, MongoDB, RMI) para garantizar que
+     * {@code OrderService} es la fuente de verdad sin depender de identidad de objeto.
+     *
+     * @param orderService instancia de {@code OrderService} del sistema; puede ser {@code null}
+     *                     para modo legacy
+     */
+    public KitchenService(OrderService orderService) {
+        this.cola         = new PriorityQueue<>(NIVELES_PRIORIDAD);
+        this.orderService = orderService;
+    }
+
     // ── Estado de fogones (null = libre) ─────────────────────────────────────
     private Order fogonGrande;    // FOGON_GRANDE  — pedidos complejos
     private Order fogonNormal1;   // FOGON_NORMAL_1
     private Order fogonNormal2;   // FOGON_NORMAL_2
     private Order fogonNormal3;   // FOGON_NORMAL_3
-
-    public KitchenService() {
-        this.cola = new PriorityQueue<>(NIVELES_PRIORIDAD);
-    }
 
     // ── encolarPedido ─────────────────────────────────────────────────────────
 
@@ -133,7 +167,18 @@ public class KitchenService implements KitchenInterface {
             throw new IllegalStateException(
                 "Solo se marca LISTO desde EN_PREPARACION. Estado: " + enFogon.getEstado());
 
-        enFogon.setEstado(EstadoPedido.LISTO);
+        // A-02: sincronización con OrderService.
+        // MODO COORDINADO: orderService.marcarListo() aplica el setEstado(LISTO)
+        //   internamente y formaliza el cambio en la fuente de verdad.
+        //   NO llamar setEstado directamente (evita doble-set que causaría
+        //   IllegalStateException en marcarListo al encontrar ya LISTO).
+        // MODO LEGACY: sin orderService, el setEstado directo funciona por identidad
+        //   de referencia Java (comportamiento original, backward compatible).
+        if (orderService != null) {
+            orderService.marcarListo(pedidoId); // delega setEstado(LISTO) + actualizar()
+        } else {
+            enFogon.setEstado(EstadoPedido.LISTO); // legacy: mutación directa
+        }
         liberarFogon(pedidoId);
         procesarSiguientePedido(); // intenta asignar siguiente compatible
         return true;

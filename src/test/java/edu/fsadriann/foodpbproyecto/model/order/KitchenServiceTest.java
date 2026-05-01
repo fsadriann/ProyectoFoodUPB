@@ -383,4 +383,104 @@ class KitchenServiceTest {
         assertTrue(service.colaVacia());
         assertTrue(service.obtenerEstadoFogones().contains("LIBRE"));
     }
+
+    // ── A-02: Coordinación KitchenService ↔ OrderService ─────────────────────
+    // Verifica el modo coordinado (constructor con OrderService) y el legacy
+    // (constructor vacío). Los 24 tests anteriores usan el constructor vacío
+    // y no se modifican.
+
+    @Test
+    @DisplayName("A-02 | Modo legacy (sin OrderService): marcarPedidoListo funciona igual")
+    void coordinacion_modoLegacy_sinOrderService() {
+        // El constructor vacío sigue funcionando sin cambios
+        KitchenService kitchenLegacy = new KitchenService(); // null OrderService
+        Order o = pedidoSimple("1001", false);
+        kitchenLegacy.encolarPedido(o);
+        kitchenLegacy.procesarSiguientePedido();
+        assertEquals(EstadoPedido.EN_PREPARACION, o.getEstado());
+
+        kitchenLegacy.marcarPedidoListo(o.getOrderId());
+        assertEquals(EstadoPedido.LISTO, o.getEstado()); // funciona igual
+    }
+
+    @Test
+    @DisplayName("A-02 | Modo coordinado: estado LISTO visible en OrderService tras marcarPedidoListo")
+    void coordinacion_modoCoordinado_estadoReflejadoEnOrderService() throws java.rmi.RemoteException {
+        OrderService os = new OrderService();
+        KitchenService kitchen = new KitchenService(os);
+
+        // Crear el pedido en OrderService (fuente de verdad)
+        Order o = os.crearPedido("1001", false);
+        o.agregarProducto(simple("P1"));
+        os.enviarPedidoACocina(o); // → EN_PREPARACION (OrderService actualiza)
+
+        // Encolar en kitchen con la MISMA referencia
+        kitchen.encolarPedido(o);
+        kitchen.procesarSiguientePedido();
+
+        // Kitchen marca listo → llama os.marcarListo() internamente
+        kitchen.marcarPedidoListo(o.getOrderId());
+
+        // Verificar que OrderService refleja el estado LISTO
+        assertEquals(EstadoPedido.LISTO,
+                os.buscarPedido(o.getOrderId()).getEstado(),
+                "OrderService debe reflejar LISTO tras marcarPedidoListo en modo coordinado");
+    }
+
+    @Test
+    @DisplayName("A-02 | Modo coordinado: estado EN_PREPARACION visible en OrderService tras procesar")
+    void coordinacion_modoCoordinado_enPreparacionEnOrderService() throws java.rmi.RemoteException {
+        OrderService os = new OrderService();
+        KitchenService kitchen = new KitchenService(os);
+
+        Order o = os.crearPedido("1001", false);
+        o.agregarProducto(simple("P1"));
+        os.enviarPedidoACocina(o); // → EN_PREPARACION
+
+        kitchen.encolarPedido(o);
+        kitchen.procesarSiguientePedido(); // asigna fogón → EN_PREPARACION
+
+        // En memoria: mismo objeto, ya está EN_PREPARACION en ambos
+        assertEquals(EstadoPedido.EN_PREPARACION,
+                os.buscarPedido(o.getOrderId()).getEstado());
+    }
+
+    @Test
+    @DisplayName("A-02 | Constructor vacío es backward compatible con constructor(null)")
+    void coordinacion_constructorVacioEquivalenteANull() {
+        // Ambos constructores deben comportarse igual (mismo estado de fogones)
+        KitchenService k1 = new KitchenService();
+        KitchenService k2 = new KitchenService(null);
+        // Ambos arrancan con cola vacía y fogones libres
+        assertTrue(k1.colaVacia());
+        assertTrue(k2.colaVacia());
+        assertTrue(k1.obtenerEstadoFogones().contains("LIBRE"));
+        assertTrue(k2.obtenerEstadoFogones().contains("LIBRE"));
+    }
+
+    @Test
+    @DisplayName("A-02 | Flujo completo coordinado: PENDIENTE→EN_PREPARACION→LISTO→EN_CAMINO→ENTREGADO")
+    void coordinacion_flujoCompletoCritico() throws java.rmi.RemoteException {
+        OrderService os   = new OrderService();
+        KitchenService ks = new KitchenService(os);
+
+        Order o = os.crearPedido("1001", false);
+        o.agregarProducto(simple("P1"));
+        os.enviarPedidoACocina(o);           // PENDIENTE → EN_PREPARACION
+
+        ks.encolarPedido(o);
+        ks.procesarSiguientePedido();        // asigna fogón
+
+        ks.marcarPedidoListo(o.getOrderId()); // EN_PREPARACION → LISTO (coordinado)
+        assertEquals(EstadoPedido.LISTO,
+                os.buscarPedido(o.getOrderId()).getEstado());
+
+        os.marcarEnCamino(o.getOrderId());   // LISTO → EN_CAMINO
+        assertEquals(EstadoPedido.EN_CAMINO,
+                os.buscarPedido(o.getOrderId()).getEstado());
+
+        os.marcarEntregado(o.getOrderId()); // EN_CAMINO → ENTREGADO
+        assertEquals(EstadoPedido.ENTREGADO,
+                os.buscarPedido(o.getOrderId()).getEstado());
+    }
 }

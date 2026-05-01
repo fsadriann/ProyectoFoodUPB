@@ -137,4 +137,83 @@ class UserServiceTest {
     void eliminar_clienteInexistente_retornaFalse() throws RemoteException {
         assertFalse(service.eliminarCliente("9999"));
     }
+
+    // ── A-01 — Regresión: campos antes ignorados en constructor ──────────────
+    // Estos tests HABRÍAN FALLADO antes del fix. Verifican que User almacena
+    // correctamente TODOS los parámetros del constructor.
+
+    @Test
+    @DisplayName("A-01 | User guarda isPremium correctamente (true)")
+    void user_isPremium_guardaValorCorrecto() {
+        User premium = new User("id-p", "María", "García", Rol.OPERADOR,
+                "2001", true, 311000001, "Calle 1", null);
+        assertTrue(premium.isPremium(),
+                "isPremium debe ser true, antes siempre era false (bug A-01)");
+    }
+
+    @Test
+    @DisplayName("A-01 | User guarda isPremium false correctamente")
+    void user_isNotPremium_guardaValorCorrecto() {
+        User std = new User("id-s", "Carlos", "López", Rol.OPERADOR,
+                "2002", false, 311000002, "Calle 2", null);
+        assertFalse(std.isPremium());
+    }
+
+    @Test
+    @DisplayName("A-01 | User guarda nombres correctamente")
+    void user_nombres_guardaValorCorrecto() {
+        User u = new User("id-1", "Ana", "Martínez", Rol.OPERADOR,
+                "2003", false, 311000003, "Dir", null);
+        assertEquals("Ana", u.getNombres());
+    }
+
+    @Test
+    @DisplayName("A-01 | User guarda apellidos correctamente")
+    void user_apellidos_guardaValorCorrecto() {
+        User u = new User("id-1", "Ana", "Martínez", Rol.OPERADOR,
+                "2003", false, 311000003, "Dir", null);
+        assertEquals("Martínez", u.getApellidos());
+    }
+
+    @Test
+    @DisplayName("A-01 | User.getNombreCompleto() retorna nombres y apellidos")
+    void user_getNombreCompleto_retornaNombreCompleto() {
+        User u = new User("id-1", "Ana", "Martínez", Rol.OPERADOR,
+                "2003", false, 311000003, "Dir", null);
+        assertEquals("Ana Martínez", u.getNombreCompleto().trim());
+    }
+
+    @Test
+    @DisplayName("A-01 | User guarda id correctamente")
+    void user_id_guardaValorCorrecto() {
+        User u = new User("uuid-test-001", "Pedro", "Ruiz", Rol.OPERADOR,
+                "2004", false, 311000004, "Dir", null);
+        assertEquals("uuid-test-001", u.getId());
+    }
+
+    @Test
+    @DisplayName("A-01 | User guarda rol correctamente")
+    void user_rol_guardaValorCorrecto() {
+        User u = new User("id-1", "Luisa", "Díaz", Rol.OPERADOR,
+                "2005", false, 311000005, "Dir", null);
+        assertEquals(Rol.OPERADOR, u.getRol());
+    }
+
+    @Test
+    @DisplayName("A-01 | favProductos null → lista vacía (no NullPointerException)")
+    void user_favProductosNulo_inicializaListaVacia() {
+        User u = new User("id-1", "Test", "Test", Rol.OPERADOR,
+                "2006", false, 311000006, "Dir", null);
+        assertNotNull(u.getFavProductos(), "favProductos no debe ser null");
+    }
+
+    @Test
+    @DisplayName("A-01 | isPremium cambia correctamente con setter")
+    void user_setPremium_actualiza() {
+        User u = new User("id-1", "Test", "Test", Rol.OPERADOR,
+                "2007", false, 311000007, "Dir", null);
+        assertFalse(u.isPremium());
+        u.setPremium(true);
+        assertTrue(u.isPremium());
+    }
 }
