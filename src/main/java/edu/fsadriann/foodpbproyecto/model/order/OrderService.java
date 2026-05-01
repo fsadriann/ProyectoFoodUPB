@@ -1,6 +1,7 @@
 package edu.fsadriann.foodpbproyecto.model.order;
 
 import edu.fsadriann.app.linkedlist.doubly.doubly.LinkedList;
+import edu.fsadriann.foodpbproyecto.model.cuadrante.CuadranteInterface;
 import edu.fsadriann.foodpbproyecto.model.product.Product;
 import edu.fsadriann.model.iterator.Iterator;
 
@@ -24,6 +25,14 @@ public class OrderService implements OrderInterface {
 
     private static final double IVA            = 0.19;
     private static final double COSTO_DOMI_STD = 5_000.0; // COP estándar
+
+    /**
+     * Cuadrante de origen para cálculos de ruta. RF-13.
+     * Base temporal única del sistema (Campus UPB).
+     * En fases futuras puede convertirse en parámetro configurable
+     * si el sistema soporta múltiples bases de despacho.
+     */
+    static final String ORIGEN_BASE = "UPB";
 
     /** Almacén principal de pedidos. DoublyLinkedList del JAR. */
     private final LinkedList<Order> pedidos;
@@ -226,7 +235,80 @@ public class OrderService implements OrderInterface {
         return resultado;
     }
 
-    // ── Helper privado ───────────────────────────────────────────────────────
+    // ── RF-13: asignarCuadranteDestino / calcularRutaEntrega ─────────────────────────
+
+    /**
+     * Asigna el cuadrante de destino a un pedido.
+     *
+     * <p>Validaciones:
+     * <ul>
+     *   <li>El pedido debe existir.</li>
+     *   <li>El cuadrante debe estar registrado en {@code cs}.</li>
+     *   <li>El estado no puede ser {@link EstadoPedido#CANCELADO}.</li>
+     * </ul>
+     *
+     * @param orderId         UUID del pedido
+     * @param nombreCuadrante nombre del cuadrante destino
+     * @param cs              servicio de cuadrantes (para validar existencia)
+     * @return {@code true} si la asignación fue exitosa
+     * @throws IllegalArgumentException si {@code nombreCuadrante} es nulo o vacío
+     */
+    @Override
+    public boolean asignarCuadranteDestino(String orderId, String nombreCuadrante,
+                                           CuadranteInterface cs) {
+        if (nombreCuadrante == null || nombreCuadrante.isBlank())
+            throw new IllegalArgumentException(
+                    "El nombre del cuadrante no puede ser nulo ni vacío.");
+        if (orderId == null) return false;
+
+        try {
+            Order pedido = buscarPedido(orderId);
+            if (pedido == null) return false;
+            if (pedido.getEstado() == EstadoPedido.CANCELADO) return false;
+            if (cs.buscarCuadrante(nombreCuadrante) == null) return false;
+
+            pedido.setCuadranteDestino(nombreCuadrante);
+            return actualizar(pedido);
+        } catch (RemoteException e) {
+            return false; // no ocurre en la implementación en memoria
+        }
+    }
+
+    /**
+     * Calcula la ruta óptima de entrega desde {@value #ORIGEN_BASE}
+     * hasta el cuadrante de destino del pedido usando Dijkstra.
+     *
+     * <p>Retorna {@code null} si:
+     * <ul>
+     *   <li>El pedido no existe o está CANCELADO.</li>
+     *   <li>El pedido no tiene cuadrante destino asignado.</li>
+     *   <li>El origen base no está en el grafo de cuadrantes.</li>
+     *   <li>No existe ruta entre origen y destino en el grafo.</li>
+     * </ul>
+     *
+     * @param orderId UUID del pedido con cuadranteDestino asignado
+     * @param cs      servicio de cuadrantes con el grafo de rutas
+     * @return lista de nombres de cuadrantes en la ruta óptima, o {@code null}
+     */
+    @Override
+    public edu.fsadriann.app.linkedlist.singly.singly.LinkedList<String> calcularRutaEntrega(
+            String orderId, CuadranteInterface cs) {
+        if (orderId == null) return null;
+        try {
+            Order pedido = buscarPedido(orderId);
+            if (pedido == null) return null;
+            if (pedido.getEstado() == EstadoPedido.CANCELADO) return null;
+            if (pedido.getCuadranteDestino() == null) return null;
+            // Valida que la base exista en el grafo antes de calcular
+            if (cs.buscarCuadrante(ORIGEN_BASE) == null) return null;
+            if (cs.buscarCuadrante(pedido.getCuadranteDestino()) == null) return null;
+            return cs.calcularRutaMasCorta(ORIGEN_BASE, pedido.getCuadranteDestino());
+        } catch (RemoteException e) {
+            return null;
+        }
+    }
+
+    // ── Helper privado ─────────────────────────────────────────────────────────────
 
     /**
      * Reemplaza el pedido en la lista por su versión actualizada.

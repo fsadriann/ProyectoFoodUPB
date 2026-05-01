@@ -304,4 +304,151 @@ class OrderServiceTest {
         }
         assertEquals(2, count, "Solo deben aparecer los pedidos del cliente 1001");
     }
+
+    // ── RF-13: asignarCuadranteDestino ───────────────────────────────────────
+
+    /** Construye un CuadranteService mínimo con UPB y Cabecera conectados. */
+    private edu.fsadriann.foodpbproyecto.model.cuadrante.CuadranteService mapaBasico() {
+        edu.fsadriann.foodpbproyecto.model.cuadrante.CuadranteService cs =
+                new edu.fsadriann.foodpbproyecto.model.cuadrante.CuadranteService();
+        cs.agregarCuadrante(new edu.fsadriann.foodpbproyecto.model.cuadrante.Cuadrante("UPB",      "Campus UPB"));
+        cs.agregarCuadrante(new edu.fsadriann.foodpbproyecto.model.cuadrante.Cuadrante("Cabecera", "Barrio Cabecera"));
+        cs.agregarCuadrante(new edu.fsadriann.foodpbproyecto.model.cuadrante.Cuadrante("Laureles", "Barrio Laureles"));
+        cs.conectarCuadrantes("UPB",      "Laureles",  1.2);
+        cs.conectarCuadrantes("Laureles", "Cabecera",  2.0);
+        return cs;
+    }
+
+    @Test
+    @DisplayName("RF-13 | Asignar cuadrante existente → true")
+    void asignar_cuadranteExistente_retornaTrue() throws RemoteException {
+        var cs = mapaBasico();
+        Order o = service.crearPedido(CEDULA, false);
+        assertTrue(service.asignarCuadranteDestino(o.getOrderId(), "Cabecera", cs));
+    }
+
+    @Test
+    @DisplayName("RF-13 | Asignar guarda cuadranteDestino en el pedido")
+    void asignar_guardaEnPedido() throws RemoteException {
+        var cs = mapaBasico();
+        Order o = service.crearPedido(CEDULA, false);
+        service.asignarCuadranteDestino(o.getOrderId(), "Cabecera", cs);
+        assertEquals("Cabecera",
+                service.buscarPedido(o.getOrderId()).getCuadranteDestino());
+    }
+
+    @Test
+    @DisplayName("RF-13 | Reasignar cuadrante → actualiza al nuevo")
+    void asignar_reasignar_actualizaCorrectamente() throws RemoteException {
+        var cs = mapaBasico();
+        Order o = service.crearPedido(CEDULA, false);
+        service.asignarCuadranteDestino(o.getOrderId(), "Cabecera", cs);
+        service.asignarCuadranteDestino(o.getOrderId(), "Laureles", cs);
+        assertEquals("Laureles",
+                service.buscarPedido(o.getOrderId()).getCuadranteDestino());
+    }
+
+    @Test
+    @DisplayName("RF-13 | Cuadrante no registrado → false")
+    void asignar_cuadranteInexistente_retornaFalse() throws RemoteException {
+        var cs = mapaBasico();
+        Order o = service.crearPedido(CEDULA, false);
+        assertFalse(service.asignarCuadranteDestino(o.getOrderId(), "NoExiste", cs));
+    }
+
+    @Test
+    @DisplayName("RF-13 | Pedido inexistente → false")
+    void asignar_pedidoInexistente_retornaFalse() {
+        var cs = mapaBasico();
+        assertFalse(service.asignarCuadranteDestino("uuid-inventado", "Cabecera", cs));
+    }
+
+    @Test
+    @DisplayName("RF-13 | Pedido CANCELADO → false")
+    void asignar_pedidoCancelado_retornaFalse() throws RemoteException {
+        var cs = mapaBasico();
+        Order o = service.crearPedido(CEDULA, false);
+        service.cancelarPedido(o.getOrderId());
+        assertFalse(service.asignarCuadranteDestino(o.getOrderId(), "Cabecera", cs));
+    }
+
+    @Test
+    @DisplayName("RF-13 | Nombre cuadrante nulo → IllegalArgumentException")
+    void asignar_nombreNulo_lanzaExcepcion() throws RemoteException {
+        var cs = mapaBasico();
+        Order o = service.crearPedido(CEDULA, false);
+        assertThrows(IllegalArgumentException.class,
+                () -> service.asignarCuadranteDestino(o.getOrderId(), null, cs));
+    }
+
+    @Test
+    @DisplayName("RF-13 | Nombre cuadrante vacío → IllegalArgumentException")
+    void asignar_nombreVacio_lanzaExcepcion() throws RemoteException {
+        var cs = mapaBasico();
+        Order o = service.crearPedido(CEDULA, false);
+        assertThrows(IllegalArgumentException.class,
+                () -> service.asignarCuadranteDestino(o.getOrderId(), "  ", cs));
+    }
+
+    // ── RF-13: calcularRutaEntrega ────────────────────────────────────────────
+
+    @Test
+    @DisplayName("RF-13 | Flujo completo: crear → asignar → calcular ruta")
+    void ruta_flujoCompleto_retornaRuta() throws RemoteException {
+        var cs = mapaBasico();
+        Order o = service.crearPedido(CEDULA, false);
+        service.asignarCuadranteDestino(o.getOrderId(), "Cabecera", cs);
+
+        var ruta = service.calcularRutaEntrega(o.getOrderId(), cs);
+
+        assertNotNull(ruta, "Debe existir ruta UPB → Cabecera");
+        // Verificar que la ruta contiene al menos 2 nodos
+        edu.fsadriann.model.iterator.Iterator<String> it = ruta.iterator();
+        int nodos = 0;
+        while (it.hasNext()) { it.next(); nodos++; }
+        assertTrue(nodos >= 2, "La ruta debe tener al menos 2 nodos");
+    }
+
+    @Test
+    @DisplayName("RF-13 | Sin cuadranteDestino asignado → null")
+    void ruta_sinDestino_retornaNull() throws RemoteException {
+        var cs = mapaBasico();
+        Order o = service.crearPedido(CEDULA, false);
+        assertNull(service.calcularRutaEntrega(o.getOrderId(), cs));
+    }
+
+    @Test
+    @DisplayName("RF-13 | Pedido inexistente → null")
+    void ruta_pedidoInexistente_retornaNull() {
+        var cs = mapaBasico();
+        assertNull(service.calcularRutaEntrega("uuid-inventado", cs));
+    }
+
+    @Test
+    @DisplayName("RF-13 | Pedido CANCELADO → null")
+    void ruta_pedidoCancelado_retornaNull() throws RemoteException {
+        var cs = mapaBasico();
+        Order o = service.crearPedido(CEDULA, false);
+        service.asignarCuadranteDestino(o.getOrderId(), "Cabecera", cs);
+        service.cancelarPedido(o.getOrderId());
+        assertNull(service.calcularRutaEntrega(o.getOrderId(), cs));
+    }
+
+    @Test
+    @DisplayName("RF-13 | Origen UPB no en grafo → null")
+    void ruta_origenBaseNoExiste_retornaNull() throws RemoteException {
+        // Grafo sin UPB
+        edu.fsadriann.foodpbproyecto.model.cuadrante.CuadranteService csSinBase =
+                new edu.fsadriann.foodpbproyecto.model.cuadrante.CuadranteService();
+        csSinBase.agregarCuadrante(
+                new edu.fsadriann.foodpbproyecto.model.cuadrante.Cuadrante("Cabecera", "Zona"));
+
+        Order o = service.crearPedido(CEDULA, false);
+        // Asignamos directamente en el modelo (el service no lo validaría sin UPB)
+        o.setCuadranteDestino("Cabecera");
+
+        assertNull(service.calcularRutaEntrega(o.getOrderId(), csSinBase),
+                "Si UPB no está en el grafo, no se puede calcular ruta");
+    }
 }
+

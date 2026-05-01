@@ -48,6 +48,13 @@ public class Order {
     /** Marca de tiempo de creación del pedido (epoch ms). */
     private final long timestamp;
 
+    /**
+     * Cuadrante de destino para la entrega. RF-13.
+     * {@code null} hasta que {@code OrderService.asignarCuadranteDestino} lo establezca.
+     * Clave de búsqueda en el {@code matrixGraph<String>} de {@code CuadranteService}.
+     */
+    private String cuadranteDestino;
+
     // ──────────────────────────────────────────────────────────
     // Constructores
     // ──────────────────────────────────────────────────────────
@@ -141,6 +148,14 @@ public class Order {
         return timestamp;
     }
 
+    /**
+     * @return nombre del cuadrante de destino asignado para entrega,
+     *         o {@code null} si aún no ha sido asignado (RF-13)
+     */
+    public String getCuadranteDestino() {
+        return cuadranteDestino;
+    }
+
     // Setters (solo los que deben modificarse externamente)
 
     /**
@@ -178,6 +193,16 @@ public class Order {
         this.cantProductos = cantProductos;
     }
 
+    /**
+     * Establece el cuadrante de destino del pedido. Solo lo invoca {@code OrderService}.
+     * El nombre debe corresponder a un cuadrante registrado en {@code CuadranteService}.
+     *
+     * @param cuadranteDestino nombre del cuadrante de destino (RF-13)
+     */
+    public void setCuadranteDestino(String cuadranteDestino) {
+        this.cuadranteDestino = cuadranteDestino;
+    }
+
     // ──────────────────────────────────────────────────────────
     // Utilidades de carrito
     // ──────────────────────────────────────────────────────────
@@ -210,6 +235,7 @@ public class Order {
                 "id='" + orderId + '\'' +
                 ", cliente='" + cedulaCliente + '\'' +
                 ", estado=" + estado +
+                ", destino='" + (cuadranteDestino != null ? cuadranteDestino : "sin asignar") + '\'' +
                 ", total=$" + total +
                 ", items=" + cantProductos +
                 '}';
