@@ -1,6 +1,5 @@
 package edu.fsadriann.foodpbproyecto.model.user;
 
-import edu.fsadriann.foodpbproyecto.model.Rol;
 
 /**
  * Representa un operador del sistema Food UPB.

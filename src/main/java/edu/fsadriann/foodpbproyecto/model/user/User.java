@@ -2,7 +2,6 @@ package edu.fsadriann.foodpbproyecto.model.user;
 
 import edu.fsadriann.app.linkedlist.singly.singly.LinkedList;
 import edu.fsadriann.foodpbproyecto.model.product.Product;
-import edu.fsadriann.foodpbproyecto.model.Rol;
 
 public class User {
     private String cedula;

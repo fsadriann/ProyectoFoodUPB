@@ -1,0 +1,307 @@
+package edu.fsadriann.foodpbproyecto.model.order;
+
+import edu.fsadriann.foodpbproyecto.model.product.Product;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.rmi.RemoteException;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+/**
+ * Tests de OrderService para RF-02, RF-03 y RF-04.
+ *
+ * <ul>
+ * <li>RF-02 – crearPedido, enviarPedidoACocina</li>
+ * <li>RF-03 – calcularFactura (subtotal + IVA + domicilio)</li>
+ * <li>RF-04 – buscarPedido, modificarPedido, cancelarPedido, agregar/quitar
+ * producto</li>
+ * </ul>
+ *
+ * @author fsadriann
+ */
+@DisplayName("OrderService – RF-02, RF-03 y RF-04")
+class OrderServiceTest {
+
+    private OrderService service;
+
+    private static final String CEDULA = "1001";
+    private static final double IVA = 0.19;
+    private static final double DOMI_STD = 5_000.0;
+
+    // ── Fixture ───────────────────────────────────────────────────────────────
+
+    @BeforeEach
+    void setUp() {
+        service = new OrderService();
+    }
+
+    private Product producto(String id, int precio, int cantidad) {
+        Product p = new Product(id, "Producto-" + id, "PLATO_PRINCIPAL", precio, false);
+        p.setCantidad(cantidad);
+        return p;
+    }
+
+    // ── RF-02: crearPedido ────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("RF-02 | Crear pedido estándar → estado PENDIENTE")
+    void crear_pedidoEstandar_estadoPendiente() throws RemoteException {
+        Order o = service.crearPedido(CEDULA, false);
+        assertNotNull(o);
+        assertNotNull(o.getOrderId(), "Debe tener UUID asignado");
+        assertEquals(EstadoPedido.PENDIENTE, o.getEstado());
+        assertFalse(o.isPremium());
+        assertEquals(CEDULA, o.getCedulaCliente());
+    }
+
+    @Test
+    @DisplayName("RF-02 | Crear pedido premium → isPremium true")
+    void crear_pedidoPremium_flagCorrecto() throws RemoteException {
+        Order o = service.crearPedido(CEDULA, true);
+        assertTrue(o.isPremium());
+    }
+
+    @Test
+    @DisplayName("RF-02 | Crear pedido con cédula nula → excepción")
+    void crear_cedulaNula_lanzaExcepcion() {
+        assertThrows(IllegalArgumentException.class,
+                () -> service.crearPedido(null, false));
+    }
+
+    @Test
+    @DisplayName("RF-02 | Crear pedido con cédula vacía → excepción")
+    void crear_cedulaVacia_lanzaExcepcion() {
+        assertThrows(IllegalArgumentException.class,
+                () -> service.crearPedido("   ", false));
+    }
+
+    @Test
+    @DisplayName("RF-02 | IDs de pedidos distintos entre creaciones")
+    void crear_dosVeces_idsDistintos() throws RemoteException {
+        Order o1 = service.crearPedido(CEDULA, false);
+        Order o2 = service.crearPedido(CEDULA, false);
+        assertNotEquals(o1.getOrderId(), o2.getOrderId());
+    }
+
+    // ── RF-02: enviarPedidoACocina ────────────────────────────────────────────
+
+    @Test
+    @DisplayName("RF-02 | Enviar a cocina con producto → estado EN_PREPARACION")
+    void enviarCocina_conProducto_estadoEnPreparacion() throws RemoteException {
+        Order o = service.crearPedido(CEDULA, false);
+        o.agregarProducto(producto("P1", 20_000, 1));
+        service.enviarPedidoACocina(o);
+        assertEquals(EstadoPedido.EN_PREPARACION, o.getEstado());
+    }
+
+    @Test
+    @DisplayName("RF-02 | Enviar a cocina sin productos → excepción")
+    void enviarCocina_sinProductos_lanzaExcepcion() throws RemoteException {
+        Order o = service.crearPedido(CEDULA, false);
+        assertThrows(IllegalStateException.class,
+                () -> service.enviarPedidoACocina(o));
+    }
+
+    @Test
+    @DisplayName("RF-02 | Enviar a cocina ya EN_PREPARACION → excepción")
+    void enviarCocina_estadoInvalido_lanzaExcepcion() throws RemoteException {
+        Order o = service.crearPedido(CEDULA, false);
+        o.agregarProducto(producto("P1", 20_000, 1));
+        service.enviarPedidoACocina(o);
+        assertThrows(IllegalStateException.class,
+                () -> service.enviarPedidoACocina(o));
+    }
+
+    // ── RF-03: calcularFactura ────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("RF-03 | Factura cliente estándar: subtotal + IVA + domicilio")
+    void factura_clienteEstandar_calculos_correctos() throws RemoteException {
+        Order o = service.crearPedido(CEDULA, false);
+        o.agregarProducto(producto("P1", 20_000, 2)); // 40.000
+        o.agregarProducto(producto("P2", 10_000, 1)); // 10.000 → subtotal = 50.000
+
+        double total = service.calcularFactura(o);
+
+        double subtotalEsperado = 50_000.0;
+        double ivaEsperado = subtotalEsperado * IVA; // 9.500
+        double domiEsperado = DOMI_STD; // 5.000
+        double totalEsperado = subtotalEsperado + ivaEsperado + domiEsperado; // 64.500
+
+        assertEquals(subtotalEsperado, o.getSubtotal(), 0.01);
+        assertEquals(ivaEsperado, o.getImpuesto(), 0.01);
+        assertEquals(domiEsperado, o.getCostoDomi(), 0.01);
+        assertEquals(totalEsperado, total, 0.01);
+    }
+
+    @Test
+    @DisplayName("RF-03 | Factura cliente premium: domicilio = $0")
+    void factura_clientePremium_domicilioGratis() throws RemoteException {
+        Order o = service.crearPedido(CEDULA, true);
+        o.agregarProducto(producto("P1", 30_000, 1));
+
+        service.calcularFactura(o);
+
+        assertEquals(0.0, o.getCostoDomi(), 0.01, "Premium no paga domicilio");
+        assertEquals(30_000 * (1 + IVA), o.getTotal(), 0.01);
+    }
+
+    @Test
+    @DisplayName("RF-03 | Factura pedido vacío → total = domicilio")
+    void factura_carritoVacio_totalEsDomicilio() throws RemoteException {
+        Order o = service.crearPedido(CEDULA, false);
+        service.calcularFactura(o);
+        assertEquals(0.0, o.getSubtotal(), 0.01);
+        assertEquals(0.0, o.getImpuesto(), 0.01);
+        assertEquals(DOMI_STD, o.getTotal(), 0.01);
+    }
+
+    @Test
+    @DisplayName("RF-03 | Factura pedido nulo → excepción")
+    void factura_pedidoNulo_lanzaExcepcion() {
+        assertThrows(IllegalArgumentException.class,
+                () -> service.calcularFactura(null));
+    }
+
+    // ── RF-04: buscarPedido ───────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("RF-04 | Buscar pedido existente → retorna pedido")
+    void buscar_pedidoExistente_retornaPedido() throws RemoteException {
+        Order o = service.crearPedido(CEDULA, false);
+        Order encontrado = service.buscarPedido(o.getOrderId());
+        assertNotNull(encontrado);
+        assertEquals(o.getOrderId(), encontrado.getOrderId());
+    }
+
+    @Test
+    @DisplayName("RF-04 | Buscar pedido inexistente → null")
+    void buscar_pedidoInexistente_retornaNull() throws RemoteException {
+        assertNull(service.buscarPedido("uuid-que-no-existe"));
+    }
+
+    @Test
+    @DisplayName("RF-04 | Buscar con ID nulo → null sin excepción")
+    void buscar_idNulo_retornaNull() throws RemoteException {
+        assertNull(service.buscarPedido(null));
+    }
+
+    // ── RF-04: modificarPedido ────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("RF-04 | Modificar en PENDIENTE → éxito")
+    void modificar_estadoPendiente_retornaTrue() throws RemoteException {
+        Order o = service.crearPedido(CEDULA, false);
+        o.agregarProducto(producto("P1", 10_000, 1));
+        assertTrue(service.modificarPedido(o));
+    }
+
+    @Test
+    @DisplayName("RF-04 | Modificar en EN_PREPARACION → excepción")
+    void modificar_estadoEnPreparacion_lanzaExcepcion() throws RemoteException {
+        Order o = service.crearPedido(CEDULA, false);
+        o.agregarProducto(producto("P1", 10_000, 1));
+        service.enviarPedidoACocina(o);
+        assertThrows(IllegalStateException.class, () -> service.modificarPedido(o));
+    }
+
+    // ── RF-04: cancelarPedido ─────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("RF-04 | Cancelar desde PENDIENTE → estado CANCELADO")
+    void cancelar_desdePendiente_exitoso() throws RemoteException {
+        Order o = service.crearPedido(CEDULA, false);
+        assertTrue(service.cancelarPedido(o.getOrderId()));
+        assertEquals(EstadoPedido.CANCELADO,
+                service.buscarPedido(o.getOrderId()).getEstado());
+    }
+
+    @Test
+    @DisplayName("RF-04 | Cancelar desde EN_PREPARACION → estado CANCELADO")
+    void cancelar_desdeEnPreparacion_exitoso() throws RemoteException {
+        Order o = service.crearPedido(CEDULA, false);
+        o.agregarProducto(producto("P1", 10_000, 1));
+        service.enviarPedidoACocina(o);
+        assertTrue(service.cancelarPedido(o.getOrderId()));
+        assertEquals(EstadoPedido.CANCELADO,
+                service.buscarPedido(o.getOrderId()).getEstado());
+    }
+
+    @Test
+    @DisplayName("RF-04 | Cancelar desde LISTO → IllegalStateException")
+    void cancelar_desdeListo_lanzaExcepcion() throws RemoteException {
+        // Crear pedido, enviarlo a cocina (EN_PREPARACION) y simular que cocina lo
+        // terminó
+        Order o = service.crearPedido("LISTO-TEST", false);
+        o.agregarProducto(producto("P1", 5_000, 1));
+        service.enviarPedidoACocina(o); // → EN_PREPARACION
+
+        // buscarPedido retorna la misma referencia que está en la DoublyLinkedList
+        Order ref = service.buscarPedido(o.getOrderId());
+        ref.setEstado(EstadoPedido.LISTO); // simular cocina terminó
+
+        // Ahora cancelar debe lanzar IllegalStateException
+        assertThrows(IllegalStateException.class,
+                () -> service.cancelarPedido(ref.getOrderId()));
+    }
+
+    @Test
+    @DisplayName("RF-04 | Cancelar pedido inexistente → false")
+    void cancelar_pedidoInexistente_retornaFalse() throws RemoteException {
+        assertFalse(service.cancelarPedido("uuid-inventado"));
+    }
+
+    // ── RF-04: agregar / quitar producto ─────────────────────────────────────
+
+    @Test
+    @DisplayName("RF-04 | Agregar producto en PENDIENTE → cantProductos sube")
+    void agregar_productoEnPendiente_incrementaCantidad() throws RemoteException {
+        Order o = service.crearPedido(CEDULA, false);
+        assertEquals(0, o.getCantProductos());
+        service.agregarProducto(o.getOrderId(), producto("P1", 10_000, 1));
+        assertEquals(1, service.buscarPedido(o.getOrderId()).getCantProductos());
+    }
+
+    @Test
+    @DisplayName("RF-04 | Agregar producto en EN_PREPARACION → excepción")
+    void agregar_productoEnPreparacion_lanzaExcepcion() throws RemoteException {
+        Order o = service.crearPedido(CEDULA, false);
+        o.agregarProducto(producto("P1", 10_000, 1));
+        service.enviarPedidoACocina(o);
+        assertThrows(IllegalStateException.class,
+                () -> service.agregarProducto(o.getOrderId(), producto("P2", 5_000, 1)));
+    }
+
+    @Test
+    @DisplayName("RF-04 | Quitar producto existente en PENDIENTE → éxito")
+    void quitar_productoExistente_retornaTrue() throws RemoteException {
+        Order o = service.crearPedido(CEDULA, false);
+        Product p = producto("P1", 10_000, 1);
+        service.agregarProducto(o.getOrderId(), p);
+        assertTrue(service.quitarProducto(o.getOrderId(), p));
+        assertEquals(0, service.buscarPedido(o.getOrderId()).getCantProductos());
+    }
+
+    @Test
+    @DisplayName("RF-04 | Historial de pedidos de un cliente")
+    void historial_clienteConPedidos_retornaLista() throws RemoteException {
+        service.crearPedido(CEDULA, false);
+        service.crearPedido(CEDULA, true);
+        service.crearPedido("9999", false); // otro cliente
+
+        var historial = service.getPedidosPorCliente(CEDULA);
+        assertNotNull(historial);
+
+        // Contar usando Iterator tipado del JAR
+        int count = 0;
+        edu.fsadriann.model.iterator.Iterator<Order> it = historial.iterator();
+        while (it.hasNext()) {
+            Order o = it.next();
+            if (o != null && CEDULA.equals(o.getCedulaCliente()))
+                count++;
+        }
+        assertEquals(2, count, "Solo deben aparecer los pedidos del cliente 1001");
+    }
+}

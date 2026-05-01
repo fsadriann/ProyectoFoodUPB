@@ -1,7 +1,6 @@
 package edu.fsadriann.foodpbproyecto.model.user;
 
 import edu.fsadriann.app.linkedlist.singly.singly.LinkedList;
-import edu.fsadriann.foodpbproyecto.model.Rol;
 import edu.fsadriann.foodpbproyecto.model.product.Product;
 
 public class Kitchen extends User {
