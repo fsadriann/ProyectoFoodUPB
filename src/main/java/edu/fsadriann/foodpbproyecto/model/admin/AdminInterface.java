@@ -13,5 +13,5 @@ public interface AdminInterface {
     boolean eliminarOperador(String cedula) throws RemoteException;
     boolean asignarRol(String cedula, Rol rol) throws RemoteException;
     List<Order> generarReporte(String filtroFecha, String filtroEstado, String filtroCuadrante) throws RemoteException;
-    List<String> verBitacoraAuditoria() throws RemoteException;     // RF-12
+    List<String> verBitacoraAuditoria() throws RemoteException;
 }

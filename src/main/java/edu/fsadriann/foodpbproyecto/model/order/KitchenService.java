@@ -197,8 +197,12 @@ public class KitchenService implements KitchenInterface {
 
     // ── Consultas ─────────────────────────────────────────────────────────────
 
-    @Override public int tamanoCola()  { return cola.size(); }
-    @Override public boolean colaVacia() { return cola.isEmpty(); }
+    @Override public int tamanoCola()  {
+        return cola.size();
+    }
+    @Override public boolean colaVacia() {
+        return cola.isEmpty();
+    }
 
     // ── Helpers privados ──────────────────────────────────────────────────────
 
