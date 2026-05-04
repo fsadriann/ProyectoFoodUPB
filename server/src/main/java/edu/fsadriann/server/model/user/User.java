@@ -31,7 +31,7 @@ public class User implements Serializable {
      * Número de teléfono. Deuda técnica: limitado a 2.147.483.647.
      * TODO: migrar a {@code String}.
      */
-    private int telefono;
+    private String telefono;
 
     /** Dirección de entrega principal. */
     private String direccion;
@@ -55,7 +55,7 @@ public class User implements Serializable {
      * @param favProductos lista de favoritos (puede ser {@code null} — se inicializa vacía)
      */
     public User(String id, String nombres, String apellidos, Rol rol,
-                String cedula, boolean isPremium, int telefono,
+                String cedula, boolean isPremium, String telefono,
                 String direccion, LinkedList<Product> favProductos) {
         this.id           = id;
         this.nombres      = nombres;
@@ -94,7 +94,7 @@ public class User implements Serializable {
     public boolean isPremium()     { return isPremium; }
 
     /** @return número de teléfono de contacto */
-    public int getTelefono()       { return telefono; }
+    public String getTelefono()       { return telefono; }
 
     /** @return dirección principal de entrega */
     public String getDireccion()   { return direccion; }
@@ -114,7 +114,7 @@ public class User implements Serializable {
     public void setPremium(boolean premium)        { this.isPremium = premium; }
 
     /** @param telefono nuevo número de teléfono */
-    public void setTelefono(int telefono)          { this.telefono = telefono; }
+    public void setTelefono(String telefono)          { this.telefono = telefono; }
 
     /** @param direccion nueva dirección de entrega */
     public void setDireccion(String direccion)     { this.direccion = direccion; }

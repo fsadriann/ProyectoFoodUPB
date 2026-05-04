@@ -1,108 +1,78 @@
 package edu.fsadriann.view.delivery;
 
-import edu.fsadriann.view.UIComponents;
-
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
+import javax.swing.border.*;
 import java.awt.*;
 
 public class DeliveryView extends JFrame {
 
-    private final JFrame frame;
-    private JLabel statusLabel;
-    private JButton logoutBtn;
+    private static final Color BG       = Color.WHITE;
+    private static final Color BG2      = new Color(245, 245, 245);
+    private static final Color BLUE     = new Color(24, 95, 165);
+    private static final Color BLUE_BG  = new Color(230, 241, 251);
+    private static final Color TEXT     = new Color(30, 30, 30);
+    private static final Color TEXT2    = new Color(100, 100, 100);
+    private static final Color BORDER_C  = new Color(220, 220, 220);
 
-    // ── Metric labels ─────────────────────────────────────────────────────────
-    private JLabel metricAssigned;
-    private JLabel metricTransit;
-    private JLabel metricDelivered;
-    private JLabel metricFailed;
-
-    // ── Left column — assigned orders ─────────────────────────────────────────
-    private JPanel assignedOrdersBody;
-
-    // ── Right column — quadrant grid cells ───────────────────────────────────
-    private JPanel[] quadrantCells;
     private static final String[] QUADRANT_NAMES  = {"A", "B", "C", "D", "E", "F"};
     private static final String[] QUADRANT_LABELS = {
         "Centro", "Laureles", "Floridablanca", "Girón", "Piedecuesta", "Sin asignar"
     };
 
-    // ── Right column — route panel ────────────────────────────────────────────
+    private final JFrame frame;
+    private JButton logoutBtn;
+    private JLabel  statusLabel;
+
+    private JLabel metricAssigned, metricTransit, metricDelivered, metricFailed;
+    private JPanel assignedOrdersBody;
+    private JPanel[] quadrantCells;
     private JPanel routeBody;
 
     public DeliveryView(String userLabel) {
-        super("Food UPB — Entrega");
+        super("Food UPB — Entregas");
         frame = this;
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        setMinimumSize(new Dimension(1180, 700));
+        setMinimumSize(new Dimension(1100, 650));
         setLocationRelativeTo(null);
 
         JPanel root = new JPanel(new BorderLayout());
-        root.setBackground(UIComponents.BG2);
-        root.add(buildTopbar(userLabel), BorderLayout.NORTH);
-        root.add(buildContent(),         BorderLayout.CENTER);
-        root.add(buildStatusBar(),       BorderLayout.SOUTH);
+        root.setBackground(BG2);
+        root.add(buildHeader(),  BorderLayout.NORTH);
+        root.add(buildContent(), BorderLayout.CENTER);
+        root.add(buildStatus(),  BorderLayout.SOUTH);
         setContentPane(root);
         pack();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // TOP BAR
-    // ─────────────────────────────────────────────────────────────────────────
-
-    private JPanel buildTopbar(String userLabel) {
-        JPanel top = new JPanel(new BorderLayout());
-        top.setBackground(UIComponents.BG);
-        top.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 1, 0, UIComponents.BORDER),
-            new EmptyBorder(10, 20, 10, 20)
+    private JPanel buildHeader() {
+        JPanel h = new JPanel(new BorderLayout());
+        h.setBackground(BG);
+        h.setBorder(BorderFactory.createCompoundBorder(
+            new MatteBorder(0, 0, 1, 0, BORDER_C),
+            new EmptyBorder(10, 16, 10, 16)
         ));
+        JLabel title = new JLabel("Food UPB — Entregas");
+        title.setFont(new Font("SansSerif", Font.BOLD, 15));
+        title.setForeground(BLUE);
 
-        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        left.setOpaque(false);
-        JLabel brand = new JLabel("Food UPB");
-        brand.setFont(UIComponents.fontBold(13));
-        brand.setForeground(UIComponents.TXT2);
-        brand.setBorder(new EmptyBorder(0, 0, 0, 12));
-        JPanel sep = new JPanel();
-        sep.setOpaque(true);
-        sep.setBackground(UIComponents.BORDER);
-        sep.setPreferredSize(new Dimension(1, 18));
-        JLabel section = new JLabel("Entregas");
-        section.setFont(UIComponents.fontBold(14));
-        section.setForeground(UIComponents.ACCENT);
-        section.setBorder(new EmptyBorder(0, 12, 0, 0));
-        left.add(brand);
-        left.add(sep);
-        left.add(section);
+        logoutBtn = new JButton("Cerrar sesión");
+        logoutBtn.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        logoutBtn.setFocusPainted(false);
+        logoutBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        logoutBtn = UIComponents.roundBtnSmall("Cerrar sesión", UIComponents.BG, UIComponents.TXT, UIComponents.BORDER);
-
-        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        right.setOpaque(false);
-        right.add(UIComponents.badge("Entregas", UIComponents.INFO_BG, UIComponents.INFO_FG));
-        right.add(logoutBtn);
-
-        top.add(left,  BorderLayout.WEST);
-        top.add(right, BorderLayout.EAST);
-        return top;
+        h.add(title,     BorderLayout.WEST);
+        h.add(logoutBtn, BorderLayout.EAST);
+        return h;
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // CONTENT
-    // ─────────────────────────────────────────────────────────────────────────
 
     private JPanel buildContent() {
-        JPanel content = new JPanel(new BorderLayout(0, 14));
-        content.setBorder(new EmptyBorder(16, 18, 16, 18));
-        content.setBackground(UIComponents.BG2);
-        content.add(buildMetrics(), BorderLayout.NORTH);
-        content.add(buildBody(),    BorderLayout.CENTER);
-        return content;
+        JPanel c = new JPanel(new BorderLayout(0, 12));
+        c.setBackground(BG2);
+        c.setBorder(new EmptyBorder(14, 14, 14, 14));
+        c.add(buildMetrics(), BorderLayout.NORTH);
+        c.add(buildBody(),    BorderLayout.CENTER);
+        return c;
     }
-
-    // ── Metrics row ───────────────────────────────────────────────────────────
 
     private JPanel buildMetrics() {
         JPanel row = new JPanel(new GridLayout(1, 4, 10, 0));
@@ -113,42 +83,30 @@ public class DeliveryView extends JFrame {
         metricDelivered = new JLabel("—");
         metricFailed    = new JLabel("—");
 
-        row.add(metricCard("Asignados",      metricAssigned));
-        row.add(metricCard("En tránsito",    metricTransit));
-        row.add(metricCard("Entregados hoy", metricDelivered));
-        row.add(metricCard("No entregados",  metricFailed));
+        row.add(metricTile("Asignados",       metricAssigned));
+        row.add(metricTile("En tránsito",     metricTransit));
+        row.add(metricTile("Entregados hoy",  metricDelivered));
+        row.add(metricTile("No entregados",   metricFailed));
         return row;
     }
 
-    private JPanel metricCard(String label, JLabel valueLabel) {
-        JPanel card = new JPanel() {
-            @Override protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(UIComponents.BG);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 14, 14);
-                g2.setColor(UIComponents.BORDER);
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 14, 14);
-                g2.dispose();
-            }
-        };
-        card.setOpaque(false);
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBorder(new EmptyBorder(14, 16, 14, 16));
-
+    private JPanel metricTile(String label, JLabel val) {
+        JPanel p = new JPanel();
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+        p.setBackground(BG);
+        p.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(BORDER_C), new EmptyBorder(10, 12, 10, 12)
+        ));
         JLabel lbl = new JLabel(label);
-        lbl.setFont(UIComponents.fontPlain(12));
-        lbl.setForeground(UIComponents.TXT2);
-        valueLabel.setFont(UIComponents.fontBold(28));
-        valueLabel.setForeground(UIComponents.TXT);
-
-        card.add(lbl);
-        card.add(Box.createVerticalStrut(4));
-        card.add(valueLabel);
-        return card;
+        lbl.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        lbl.setForeground(TEXT2);
+        val.setFont(new Font("SansSerif", Font.BOLD, 22));
+        val.setForeground(TEXT);
+        p.add(lbl);
+        p.add(Box.createVerticalStrut(4));
+        p.add(val);
+        return p;
     }
-
-    // ── Body: left (assigned orders) + right (map + route) ───────────────────
 
     private JPanel buildBody() {
         JPanel body = new JPanel(new BorderLayout(14, 0));
@@ -163,24 +121,26 @@ public class DeliveryView extends JFrame {
     private JScrollPane buildAssignedPanel() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBackground(UIComponents.BG2);
+        panel.setBackground(BG);
 
-        JLabel title = secLabel("Pedidos asignados");
-        title.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.add(title);
+        JLabel lbl = new JLabel("PEDIDOS ASIGNADOS");
+        lbl.setFont(new Font("SansSerif", Font.BOLD, 10));
+        lbl.setForeground(TEXT2);
+        lbl.setAlignmentX(LEFT_ALIGNMENT);
+        panel.add(lbl);
         panel.add(Box.createVerticalStrut(8));
 
         assignedOrdersBody = new JPanel();
         assignedOrdersBody.setLayout(new BoxLayout(assignedOrdersBody, BoxLayout.Y_AXIS));
-        assignedOrdersBody.setBackground(UIComponents.BG2);
-        assignedOrdersBody.setAlignmentX(Component.LEFT_ALIGNMENT);
+        assignedOrdersBody.setBackground(BG);
+        assignedOrdersBody.setAlignmentX(LEFT_ALIGNMENT);
         panel.add(assignedOrdersBody);
         panel.add(Box.createVerticalGlue());
 
         JScrollPane scroll = new JScrollPane(panel);
-        scroll.setBorder(null);
-        scroll.getViewport().setBackground(UIComponents.BG2);
-        scroll.setPreferredSize(new Dimension(320, 0));
+        scroll.setBorder(new LineBorder(BORDER_C));
+        scroll.getViewport().setBackground(BG);
+        scroll.setPreferredSize(new Dimension(300, 0));
         scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         return scroll;
     }
@@ -190,45 +150,37 @@ public class DeliveryView extends JFrame {
     private JPanel buildMapAndRoute() {
         JPanel right = new JPanel();
         right.setLayout(new BoxLayout(right, BoxLayout.Y_AXIS));
-        right.setOpaque(false);
+        right.setBackground(BG2);
 
-        // Map section
-        JPanel mapSection = new JPanel();
-        mapSection.setLayout(new BoxLayout(mapSection, BoxLayout.Y_AXIS));
-        mapSection.setOpaque(false);
-        mapSection.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel mapLbl = new JLabel("MAPA DE CUADRANTES");
+        mapLbl.setFont(new Font("SansSerif", Font.BOLD, 10));
+        mapLbl.setForeground(TEXT2);
+        mapLbl.setAlignmentX(LEFT_ALIGNMENT);
+        right.add(mapLbl);
+        right.add(Box.createVerticalStrut(6));
+        right.add(buildQuadrantGrid());
+        right.add(Box.createVerticalStrut(14));
 
-        JLabel mapTitle = secLabel("Mapa de cuadrantes");
-        mapTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-        mapSection.add(mapTitle);
-        mapSection.add(Box.createVerticalStrut(8));
-        mapSection.add(buildQuadrantGrid());
-
-        // Route section
-        JPanel routeSection = new JPanel();
-        routeSection.setLayout(new BoxLayout(routeSection, BoxLayout.Y_AXIS));
-        routeSection.setOpaque(false);
-        routeSection.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel routeTitle = secLabel("Ruta optimizada");
-        routeTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-        routeSection.add(routeTitle);
-        routeSection.add(Box.createVerticalStrut(8));
+        JLabel routeLbl = new JLabel("RUTA OPTIMIZADA");
+        routeLbl.setFont(new Font("SansSerif", Font.BOLD, 10));
+        routeLbl.setForeground(TEXT2);
+        routeLbl.setAlignmentX(LEFT_ALIGNMENT);
+        right.add(routeLbl);
+        right.add(Box.createVerticalStrut(6));
 
         routeBody = new JPanel();
         routeBody.setLayout(new BoxLayout(routeBody, BoxLayout.Y_AXIS));
-        routeBody.setBackground(UIComponents.BG);
+        routeBody.setBackground(BG);
         routeBody.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(1, 1, 1, 1, UIComponents.BORDER),
-            new EmptyBorder(12, 14, 12, 14)
+            new LineBorder(BORDER_C), new EmptyBorder(10, 12, 10, 12)
         ));
-        routeBody.setAlignmentX(Component.LEFT_ALIGNMENT);
-        addEmptyRoute();
-        routeSection.add(routeBody);
-
-        right.add(mapSection);
-        right.add(Box.createVerticalStrut(14));
-        right.add(routeSection);
+        routeBody.setAlignmentX(LEFT_ALIGNMENT);
+        routeBody.setMaximumSize(new Dimension(Integer.MAX_VALUE, 200));
+        JLabel empty = new JLabel("Sin ruta calculada.");
+        empty.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        empty.setForeground(TEXT2);
+        routeBody.add(empty);
+        right.add(routeBody);
         right.add(Box.createVerticalGlue());
         return right;
     }
@@ -236,49 +188,40 @@ public class DeliveryView extends JFrame {
     private JPanel buildQuadrantGrid() {
         JPanel grid = new JPanel(new GridLayout(2, 3, 8, 8));
         grid.setOpaque(false);
-        grid.setAlignmentX(Component.LEFT_ALIGNMENT);
-        grid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 160));
+        grid.setAlignmentX(LEFT_ALIGNMENT);
+        grid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
 
         quadrantCells = new JPanel[6];
         for (int i = 0; i < 6; i++) {
-            quadrantCells[i] = buildQuadrantCell(QUADRANT_NAMES[i], QUADRANT_LABELS[i], false);
+            quadrantCells[i] = buildCell(i, false);
             grid.add(quadrantCells[i]);
         }
         return grid;
     }
 
-    private JPanel buildQuadrantCell(String name, String label, boolean hasOrders) {
-        JPanel cell = new JPanel() {
-            @Override protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                Color bg = hasOrders ? UIComponents.INFO_BG : UIComponents.BG2;
-                Color border = hasOrders ? UIComponents.INFO : UIComponents.BORDER;
-                g2.setColor(bg);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
-                g2.setColor(border);
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
-                g2.dispose();
-            }
-        };
-        cell.setOpaque(false);
+    private JPanel buildCell(int index, boolean hasOrders) {
+        JPanel cell = new JPanel();
         cell.setLayout(new BoxLayout(cell, BoxLayout.Y_AXIS));
-        cell.setBorder(new EmptyBorder(10, 12, 10, 12));
+        cell.setBackground(hasOrders ? BLUE_BG : BG2);
+        cell.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(hasOrders ? BLUE : BORDER_C),
+            new EmptyBorder(8, 10, 8, 10)
+        ));
 
-        JLabel nameLbl = new JLabel("Cuadrante " + name);
-        nameLbl.setFont(UIComponents.fontBold(12));
-        nameLbl.setForeground(hasOrders ? UIComponents.INFO_FG : UIComponents.TXT);
-        nameLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel nameLbl = new JLabel("Cuadrante " + QUADRANT_NAMES[index]);
+        nameLbl.setFont(new Font("SansSerif", Font.BOLD, 12));
+        nameLbl.setForeground(hasOrders ? BLUE : TEXT);
+        nameLbl.setAlignmentX(CENTER_ALIGNMENT);
 
-        JLabel subLbl = new JLabel(label);
-        subLbl.setFont(UIComponents.fontPlain(11));
-        subLbl.setForeground(UIComponents.TXT3);
-        subLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel subLbl = new JLabel(QUADRANT_LABELS[index]);
+        subLbl.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        subLbl.setForeground(TEXT2);
+        subLbl.setAlignmentX(CENTER_ALIGNMENT);
 
         JLabel statusLbl = new JLabel(hasOrders ? "Pedidos activos" : "Sin pedidos");
-        statusLbl.setFont(UIComponents.fontBold(10));
-        statusLbl.setForeground(hasOrders ? UIComponents.INFO_FG : UIComponents.TXT3);
-        statusLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
+        statusLbl.setFont(new Font("SansSerif", Font.BOLD, 10));
+        statusLbl.setForeground(hasOrders ? BLUE : TEXT2);
+        statusLbl.setAlignmentX(CENTER_ALIGNMENT);
 
         cell.add(Box.createVerticalGlue());
         cell.add(nameLbl);
@@ -290,98 +233,74 @@ public class DeliveryView extends JFrame {
         return cell;
     }
 
-    private void addEmptyRoute() {
-        JLabel lbl = new JLabel("Sin ruta calculada");
-        lbl.setFont(UIComponents.fontPlain(12));
-        lbl.setForeground(UIComponents.TXT3);
-        lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
-        routeBody.add(lbl);
-    }
-
-    // ── Status bar ────────────────────────────────────────────────────────────
-
-    private JPanel buildStatusBar() {
+    private JPanel buildStatus() {
         JPanel bar = new JPanel(new BorderLayout());
-        bar.setBackground(UIComponents.BG);
+        bar.setBackground(BG2);
         bar.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(1, 0, 0, 0, UIComponents.BORDER),
-            new EmptyBorder(6, 18, 6, 18)
+            new MatteBorder(1, 0, 0, 0, BORDER_C),
+            new EmptyBorder(5, 14, 5, 14)
         ));
         statusLabel = new JLabel("Listo");
-        statusLabel.setFont(UIComponents.fontPlain(12));
-        statusLabel.setForeground(UIComponents.TXT2);
+        statusLabel.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        statusLabel.setForeground(TEXT2);
         bar.add(statusLabel, BorderLayout.WEST);
         return bar;
     }
 
-    private JLabel secLabel(String text) {
-        JLabel lbl = new JLabel(text.toUpperCase());
-        lbl.setFont(UIComponents.fontBold(10));
-        lbl.setForeground(UIComponents.TXT3);
-        return lbl;
-    }
+    // ── Public API ─────────────────────────────────────────────────────────────
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // PUBLIC API — data binding methods
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /** Adds an order card to the assigned orders list. */
     public void addAssignedOrder(String orderId, String clientName, String address, String quadrant) {
         SwingUtilities.invokeLater(() -> {
-            JPanel card = new JPanel() {
-                @Override protected void paintComponent(Graphics g) {
-                    Graphics2D g2 = (Graphics2D) g.create();
-                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                    g2.setColor(UIComponents.BG);
-                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
-                    g2.setColor(UIComponents.BORDER);
-                    g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
-                    g2.dispose();
-                }
-            };
-            card.setOpaque(false);
+            JPanel card = new JPanel();
             card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-            card.setBorder(new EmptyBorder(10, 12, 10, 12));
-            card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
-            card.setAlignmentX(Component.LEFT_ALIGNMENT);
+            card.setBackground(BG);
+            card.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(BORDER_C), new EmptyBorder(8, 10, 8, 10)
+            ));
+            card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 75));
+            card.setAlignmentX(LEFT_ALIGNMENT);
 
-            JPanel headerRow = new JPanel(new BorderLayout(4, 0));
-            headerRow.setOpaque(false);
-            JLabel idLbl = new JLabel(orderId + "  →  " + clientName);
-            idLbl.setFont(UIComponents.fontBold(12));
-            idLbl.setForeground(UIComponents.TXT);
-            JLabel qBadge = UIComponents.badge("Cuadrante " + quadrant, UIComponents.INFO_BG, UIComponents.INFO_FG);
-            headerRow.add(idLbl,   BorderLayout.WEST);
-            headerRow.add(qBadge,  BorderLayout.EAST);
+            JPanel top = new JPanel(new BorderLayout(4, 0));
+            top.setOpaque(false);
+            JLabel id = new JLabel(orderId + " — " + clientName);
+            id.setFont(new Font("SansSerif", Font.BOLD, 12));
+            id.setForeground(TEXT);
+            JLabel q = new JLabel("Cuad. " + quadrant);
+            q.setFont(new Font("SansSerif", Font.BOLD, 10));
+            q.setBackground(BLUE_BG);
+            q.setForeground(BLUE);
+            q.setOpaque(true);
+            q.setBorder(new EmptyBorder(1, 4, 1, 4));
+            top.add(id, BorderLayout.WEST);
+            top.add(q,  BorderLayout.EAST);
 
-            JLabel addrLbl = new JLabel(address);
-            addrLbl.setFont(UIComponents.fontPlain(11));
-            addrLbl.setForeground(UIComponents.TXT2);
-            addrLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+            JLabel addr = new JLabel(address);
+            addr.setFont(new Font("SansSerif", Font.PLAIN, 11));
+            addr.setForeground(TEXT2);
+            addr.setAlignmentX(LEFT_ALIGNMENT);
 
-            card.add(headerRow);
+            card.add(top);
             card.add(Box.createVerticalStrut(4));
-            card.add(addrLbl);
+            card.add(addr);
 
             assignedOrdersBody.add(card);
-            assignedOrdersBody.add(Box.createVerticalStrut(8));
+            assignedOrdersBody.add(Box.createVerticalStrut(6));
             assignedOrdersBody.revalidate();
             assignedOrdersBody.repaint();
         });
     }
 
-    /** Marks a quadrant as having active orders. */
     public void setQuadrantActive(int index, boolean active) {
         if (index < 0 || index >= quadrantCells.length) return;
         SwingUtilities.invokeLater(() -> {
-            JPanel old = quadrantCells[index];
-            JPanel parent = (JPanel) old.getParent();
+            JPanel parent = (JPanel) quadrantCells[index].getParent();
+            if (parent == null) return;
             int pos = -1;
             for (int i = 0; i < parent.getComponentCount(); i++) {
-                if (parent.getComponent(i) == old) { pos = i; break; }
+                if (parent.getComponent(i) == quadrantCells[index]) { pos = i; break; }
             }
             if (pos < 0) return;
-            quadrantCells[index] = buildQuadrantCell(QUADRANT_NAMES[index], QUADRANT_LABELS[index], active);
+            quadrantCells[index] = buildCell(index, active);
             parent.remove(pos);
             parent.add(quadrantCells[index], pos);
             parent.revalidate();
@@ -389,26 +308,25 @@ public class DeliveryView extends JFrame {
         });
     }
 
-    /** Adds a stop to the optimized route display. */
     public void addRouteStop(int stopNumber, String destination, String orderIds) {
         SwingUtilities.invokeLater(() -> {
             if (routeBody.getComponentCount() == 1
                     && routeBody.getComponent(0) instanceof JLabel
-                    && ((JLabel) routeBody.getComponent(0)).getText().contains("Sin ruta")) {
+                    && ((JLabel) routeBody.getComponent(0)).getText().startsWith("Sin ruta")) {
                 routeBody.removeAll();
             }
             JPanel row = new JPanel(new BorderLayout(10, 0));
             row.setOpaque(false);
-            row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
-            row.setAlignmentX(Component.LEFT_ALIGNMENT);
-            JLabel stopLbl = new JLabel(stopNumber + ".  " + destination);
-            stopLbl.setFont(UIComponents.fontBold(12));
-            stopLbl.setForeground(UIComponents.TXT);
-            JLabel idLbl = new JLabel(orderIds);
-            idLbl.setFont(UIComponents.fontPlain(11));
-            idLbl.setForeground(UIComponents.TXT2);
-            row.add(stopLbl, BorderLayout.WEST);
-            row.add(idLbl,   BorderLayout.EAST);
+            row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
+            row.setAlignmentX(LEFT_ALIGNMENT);
+            JLabel stop = new JLabel(stopNumber + ".  " + destination);
+            stop.setFont(new Font("SansSerif", Font.BOLD, 12));
+            stop.setForeground(TEXT);
+            JLabel ids = new JLabel(orderIds);
+            ids.setFont(new Font("SansSerif", Font.PLAIN, 11));
+            ids.setForeground(TEXT2);
+            row.add(stop, BorderLayout.WEST);
+            row.add(ids,  BorderLayout.EAST);
             routeBody.add(row);
             routeBody.add(Box.createVerticalStrut(4));
             routeBody.revalidate();
@@ -416,27 +334,18 @@ public class DeliveryView extends JFrame {
         });
     }
 
-    /** Updates the four metric counters. */
-    public void setMetrics(int assigned, int transit, int deliveredToday, int failed) {
+    public void setMetrics(int assigned, int transit, int delivered, int failed) {
         SwingUtilities.invokeLater(() -> {
             metricAssigned.setText(String.valueOf(assigned));
             metricTransit.setText(String.valueOf(transit));
-            metricDelivered.setText(String.valueOf(deliveredToday));
+            metricDelivered.setText(String.valueOf(delivered));
             metricFailed.setText(String.valueOf(failed));
         });
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Existing minimal API (unchanged)
-    // ─────────────────────────────────────────────────────────────────────────
-
     public void addLogoutListener(Runnable action) { logoutBtn.addActionListener(e -> action.run()); }
-
-    public void setMessage(String message) {
-        SwingUtilities.invokeLater(() -> statusLabel.setText(message));
-    }
-
-    public void showView() { setVisible(true); toFront(); }
-    public void hideView() { setVisible(false); }
+    public void setMessage(String msg)             { SwingUtilities.invokeLater(() -> statusLabel.setText(msg)); }
+    public void showView()   { setVisible(true); toFront(); }
+    public void hideView()   { setVisible(false); }
     public JFrame getFrame() { return frame; }
 }

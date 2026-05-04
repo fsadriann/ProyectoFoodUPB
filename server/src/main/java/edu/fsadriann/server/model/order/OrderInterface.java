@@ -1,5 +1,6 @@
 package edu.fsadriann.server.model.order;
 
+import edu.fsadriann.app.linkedlist.singly.singly.LinkedList;
 import edu.fsadriann.server.model.product.Product;
 
 import java.rmi.Remote;

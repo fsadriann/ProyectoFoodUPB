@@ -47,8 +47,7 @@ public class ProductService implements ProductInterface {
                 "Brownie de chocolate con helado de vainilla."));
     }
 
-    private Product crearProducto(String nombre, String categoria,
-                                  int precio, boolean isComplejo, String descripcion) {
+    private Product crearProducto(String nombre, String categoria, int precio, boolean isComplejo, String descripcion) {
         Product p = new Product(UUID.randomUUID().toString(), nombre, categoria, precio, isComplejo);
         p.setDescripcion(descripcion);
         return p;

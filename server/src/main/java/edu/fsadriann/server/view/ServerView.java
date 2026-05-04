@@ -14,8 +14,7 @@ public class ServerView extends Observer {
   private JFrame frame;
   private JButton startButton;
   private JButton stopButton;
-  private JButton loginButton;
-  
+
   private JTextArea consoleArea;
   private JLabel statusDot;
   private JLabel statusLabel;
@@ -26,7 +25,7 @@ public class ServerView extends Observer {
     this.frame = new JFrame(title);
   }
 
-  public void initComponents(UnaryOperator<Void> onStart, UnaryOperator<Void> onStop, Runnable onLogin) {
+  public void initComponents(UnaryOperator<Void> onStart, UnaryOperator<Void> onStop) {
     if (GraphicsEnvironment.isHeadless()) return;
 
     JPanel mainPanel = new JPanel(new BorderLayout());
@@ -83,23 +82,16 @@ public class ServerView extends Observer {
     // ── BOTONES ───────────────────────────────────────
     startButton = makeButton("▶  Iniciar Servidor", new Color(34, 197, 94));
     stopButton  = makeButton("■  Detener Servidor", new Color(220, 60, 60));
-    loginButton = makeButton("↪  Ir a Login", new Color(59, 130, 246));
     stopButton.setEnabled(false);
 
     startButton.addActionListener(e -> onStart.apply(null));
     stopButton.addActionListener(e -> onStop.apply(null));
-    loginButton.addActionListener(e -> {
-      if (onLogin != null) {
-        onLogin.run();
-      }
-    });
 
-    JPanel buttonPanel = new JPanel(new GridLayout(1, 3, 10, 0));
+    JPanel buttonPanel = new JPanel(new GridLayout(1, 2, 10, 0));
     buttonPanel.setBackground(new Color(20, 20, 20));
     buttonPanel.setBorder(new EmptyBorder(16, 16, 20, 16));
     buttonPanel.add(startButton);
     buttonPanel.add(stopButton);
-    buttonPanel.add(loginButton);
 
     mainPanel.add(header, BorderLayout.NORTH);
     mainPanel.add(consoleWrapper, BorderLayout.CENTER);
@@ -134,8 +126,6 @@ public class ServerView extends Observer {
     btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     return btn;
   }
-
-  
 
   public void startStatus(String status) {
     startButton.setEnabled(false);

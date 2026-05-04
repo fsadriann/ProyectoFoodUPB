@@ -20,13 +20,15 @@ public class AdminController {
     }
 
     public void init() {
-        if (initialized) {
-            return;
+        if (!initialized) {
+            view.addOpenUserFormListener(() -> view.showUserForm(this::handleCreateUser));
+            initialized = true;
         }
-        view.addOpenUserFormListener(() -> view.showUserForm(this::handleCreateUser));
-        refreshUsers();
-        view.setTotalUsers(model.getTotalUsuarios());
-        initialized = true;
+        // Siempre refrescar datos al iniciar (incluye re-logins)
+        if (model.isConnected()) {
+            refreshUsers();
+            view.setTotalUsers(model.getTotalUsuarios());
+        }
     }
 
     private void handleCreateUser(AdminUserFormData data) {
@@ -36,14 +38,8 @@ public class AdminController {
             return;
         }
 
-        int telefono;
-        try {
-            telefono = Integer.parseInt(data.getTelefono());
-        } catch (NumberFormatException ex) {
-            view.setMessage("El teléfono debe ser numérico.");
-            return;
-        }
 
+        String telefono = "";
         User user = new User(
                 data.getCorreo(),
                 data.getNombre(),

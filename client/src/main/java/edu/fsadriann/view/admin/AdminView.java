@@ -1,9 +1,7 @@
 package edu.fsadriann.view.admin;
 
-import edu.fsadriann.view.UIComponents;
-
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
+import javax.swing.border.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.LinkedHashMap;
@@ -15,6 +13,16 @@ import edu.fsadriann.model.iterator.Iterator;
 import edu.fsadriann.server.model.user.User;
 
 public class AdminView extends JFrame {
+
+    private static final Color BG       = Color.WHITE;
+    private static final Color BG2      = new Color(245, 245, 245);
+    private static final Color BLUE     = new Color(24, 95, 165);
+    private static final Color BLUE_BG  = new Color(230, 241, 251);
+    private static final Color TEXT     = new Color(30, 30, 30);
+    private static final Color TEXT2    = new Color(100, 100, 100);
+    private static final Color TEXT3    = new Color(150, 150, 150);
+    private static final Color BORDER_C = new Color(220, 220, 220);
+    private static final Color DANGER   = new Color(220, 53, 69);
 
     private static final String SEC_REPORTS  = "reports";
     private static final String SEC_USERS    = "users";
@@ -40,7 +48,7 @@ public class AdminView extends JFrame {
         setLocationRelativeTo(null);
 
         JPanel root = new JPanel(new BorderLayout());
-        root.setBackground(UIComponents.BG2);
+        root.setBackground(BG2);
 
         JPanel main = new JPanel(new BorderLayout());
         main.setOpaque(false);
@@ -53,70 +61,49 @@ public class AdminView extends JFrame {
         pack();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // HEADER  (topbar + tab bar)
-    // ─────────────────────────────────────────────────────────────────────────
-
     private JPanel buildHeader(String userLabel) {
         JPanel header = new JPanel();
         header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
-        header.setBackground(UIComponents.BG);
-        header.add(buildTopbar(userLabel));
+        header.setBackground(BG);
+        header.add(buildTopbar());
         header.add(buildTabBar());
         return header;
     }
 
-    private JPanel buildTopbar(String userLabel) {
+    private JPanel buildTopbar() {
         JPanel top = new JPanel(new BorderLayout());
-        top.setBackground(UIComponents.BG);
+        top.setBackground(BG);
         top.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 1, 0, UIComponents.BORDER),
+            new MatteBorder(0, 0, 1, 0, BORDER_C),
             new EmptyBorder(10, 20, 10, 20)
         ));
 
-        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        left.setOpaque(false);
-        JLabel brand = new JLabel("Food UPB");
-        brand.setFont(UIComponents.fontBold(13));
-        brand.setForeground(UIComponents.TXT2);
-        brand.setBorder(new EmptyBorder(0, 0, 0, 12));
-        JPanel sep = new JPanel();
-        sep.setOpaque(true);
-        sep.setBackground(UIComponents.BORDER);
-        sep.setPreferredSize(new Dimension(1, 18));
-        JLabel section = new JLabel("Administrador");
-        section.setFont(UIComponents.fontBold(14));
-        section.setForeground(UIComponents.ACCENT);
-        section.setBorder(new EmptyBorder(0, 12, 0, 0));
-        left.add(brand);
-        left.add(sep);
-        left.add(section);
+        JLabel title = new JLabel("Food UPB — Administrador");
+        title.setFont(new Font("SansSerif", Font.BOLD, 15));
+        title.setForeground(BLUE);
 
-        logoutBtn = UIComponents.roundBtnSmall("Cerrar sesión", UIComponents.BG, UIComponents.TXT, UIComponents.BORDER);
+        logoutBtn = new JButton("Cerrar sesión");
+        logoutBtn.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        logoutBtn.setFocusPainted(false);
+        logoutBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        right.setOpaque(false);
-        right.add(UIComponents.badge("Administrador", UIComponents.INFO_BG, UIComponents.INFO_FG));
-        right.add(logoutBtn);
-
-        top.add(left,  BorderLayout.WEST);
-        top.add(right, BorderLayout.EAST);
+        top.add(title,     BorderLayout.WEST);
+        top.add(logoutBtn, BorderLayout.EAST);
         return top;
     }
 
     private JPanel buildTabBar() {
         JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        bar.setBackground(UIComponents.BG);
+        bar.setBackground(BG);
         bar.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 1, 0, UIComponents.BORDER),
+            new MatteBorder(0, 0, 1, 0, BORDER_C),
             new EmptyBorder(0, 12, 0, 12)
         ));
-
-        addTab(bar, SEC_REPORTS,  "Reportes",    true);
-        addTab(bar, SEC_USERS,    "Usuarios",    false);
-        addTab(bar, SEC_PRODUCTS, "Productos",   false);
-        addTab(bar, SEC_CUADS,    "Cuadrantes",  false);
-        addTab(bar, SEC_AUDIT,    "Auditoría",   false);
+        addTab(bar, SEC_REPORTS,  "Reportes",   true);
+        addTab(bar, SEC_USERS,    "Usuarios",   false);
+        addTab(bar, SEC_PRODUCTS, "Productos",  false);
+        addTab(bar, SEC_CUADS,    "Cuadrantes", false);
+        addTab(bar, SEC_AUDIT,    "Auditoría",  false);
         return bar;
     }
 
@@ -128,45 +115,24 @@ public class AdminView extends JFrame {
     }
 
     private JButton tabButton(String text, boolean active) {
-        JButton btn = new JButton(text) {
-            @Override protected void paintComponent(Graphics g) {
-                // No custom bg — transparent
-                super.paintComponent(g);
-            }
-        };
+        JButton btn = new JButton(text);
         btn.setContentAreaFilled(false);
         btn.setBorderPainted(false);
         btn.setFocusPainted(false);
-        btn.setFont(active ? UIComponents.fontBold(13) : UIComponents.fontPlain(13));
-        btn.setForeground(active ? UIComponents.ACCENT : UIComponents.TXT2);
+        btn.setFont(new Font("SansSerif", active ? Font.BOLD : Font.PLAIN, 13));
+        btn.setForeground(active ? BLUE : TEXT2);
         btn.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, active ? 2 : 0, 0, UIComponents.ACCENT),
+            new MatteBorder(0, 0, active ? 2 : 0, 0, BLUE),
             new EmptyBorder(10, 14, 10, 14)
         ));
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseEntered(java.awt.event.MouseEvent e) {
-                if (!btn.getForeground().equals(UIComponents.ACCENT)) {
-                    btn.setForeground(UIComponents.TXT);
-                }
-            }
-            public void mouseExited(java.awt.event.MouseEvent e) {
-                if (!btn.getForeground().equals(UIComponents.ACCENT)) {
-                    btn.setForeground(UIComponents.TXT2);
-                }
-            }
-        });
         return btn;
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // CONTENT
-    // ─────────────────────────────────────────────────────────────────────────
 
     private JPanel buildContent() {
         JPanel content = new JPanel(new BorderLayout(0, 14));
         content.setBorder(new EmptyBorder(16, 18, 16, 18));
-        content.setBackground(UIComponents.BG2);
+        content.setBackground(BG2);
         content.add(buildSummary(),      BorderLayout.NORTH);
         content.add(buildSectionCards(), BorderLayout.CENTER);
         return content;
@@ -176,24 +142,25 @@ public class AdminView extends JFrame {
         JPanel panel = new JPanel(new GridLayout(1, 4, 10, 0));
         panel.setOpaque(false);
 
-        // Users counter card
-        JPanel usersCard = UIComponents.card();
+        JPanel usersCard = card();
         usersCard.setLayout(new BoxLayout(usersCard, BoxLayout.Y_AXIS));
+        usersCard.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(BORDER_C), new EmptyBorder(10, 12, 10, 12)));
         JLabel uLabel = new JLabel("Usuarios");
-        uLabel.setFont(UIComponents.fontPlain(12));
-        uLabel.setForeground(UIComponents.TXT2);
+        uLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        uLabel.setForeground(TEXT2);
         totalUsersValue = new JLabel("0");
-        totalUsersValue.setFont(UIComponents.fontBold(28));
-        totalUsersValue.setForeground(UIComponents.ACCENT);
+        totalUsersValue.setFont(new Font("SansSerif", Font.BOLD, 28));
+        totalUsersValue.setForeground(BLUE);
         usersCard.add(uLabel);
         usersCard.add(Box.createVerticalStrut(4));
         usersCard.add(totalUsersValue);
         usersCard.add(Box.createVerticalGlue());
 
         panel.add(usersCard);
-        panel.add(UIComponents.metricCard("Pedidos",   "—", "Estado de operación"));
-        panel.add(UIComponents.metricCard("Cocina",    "—", "Cola y preparación"));
-        panel.add(UIComponents.metricCard("Entregas",  "—", "Rutas activas"));
+        panel.add(metricTile("Pedidos",  "—"));
+        panel.add(metricTile("Cocina",   "—"));
+        panel.add(metricTile("Entregas", "—"));
         return panel;
     }
 
@@ -209,126 +176,95 @@ public class AdminView extends JFrame {
         return sectionCards;
     }
 
-    // ── Section: Reports ──────────────────────────────────────────────────────
-
     private JPanel buildReportsSection() {
-        JPanel card = UIComponents.card();
+        JPanel card = card();
         card.setLayout(new BorderLayout(0, 14));
         card.setBorder(new EmptyBorder(16, 18, 16, 18));
 
         JPanel metrics = new JPanel(new GridLayout(1, 4, 10, 0));
         metrics.setOpaque(false);
-        metrics.add(UIComponents.metricCard("Pedidos hoy",     "—", ""));
-        metrics.add(UIComponents.metricCard("Ingresos hoy",    "—", ""));
-        metrics.add(UIComponents.metricCard("Clientes nuevos", "—", ""));
-        metrics.add(UIComponents.metricCard("Tiempo prom.",    "—", ""));
-
-        JPanel filtersCard = UIComponents.card();
-        filtersCard.setLayout(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        filtersCard.add(new JLabel("Filtros:") {{ setFont(UIComponents.fontBold(12)); setForeground(UIComponents.TXT2); }});
-        JComboBox<String> ops = new JComboBox<>(new String[]{"Todos los operadores", "Operador 1", "Operador 2"});
-        ops.setFont(UIComponents.fontPlain(12));
-        JComboBox<String> states = new JComboBox<>(new String[]{"Todos los estados", "Pendiente", "Entregado"});
-        states.setFont(UIComponents.fontPlain(12));
-        JButton filterBtn = UIComponents.roundBtnSmall("Filtrar", UIComponents.ACCENT, Color.WHITE, null);
-        filtersCard.add(ops);
-        filtersCard.add(states);
-        filtersCard.add(filterBtn);
+        metrics.add(metricTile("Pedidos hoy",     "—"));
+        metrics.add(metricTile("Ingresos hoy",    "—"));
+        metrics.add(metricTile("Clientes nuevos", "—"));
+        metrics.add(metricTile("Tiempo prom.",    "—"));
 
         String[] cols = {"Operador", "Pedidos", "Clientes atendidos", "Tiempo prom.", "Estado"};
         DefaultTableModel rm = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
-        JTable rt = styledTable(rm);
-        JScrollPane rs = new JScrollPane(rt);
-        rs.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIComponents.BORDER));
+        JScrollPane rs = new JScrollPane(styledTable(rm));
+        rs.setBorder(new MatteBorder(1, 0, 0, 0, BORDER_C));
 
-        card.add(metrics,     BorderLayout.NORTH);
-        card.add(filtersCard, BorderLayout.CENTER);
-        card.add(rs,          BorderLayout.SOUTH);
+        card.add(metrics, BorderLayout.NORTH);
+        card.add(rs,      BorderLayout.CENTER);
         return card;
     }
 
-    // ── Section: Users ────────────────────────────────────────────────────────
-
     private JPanel buildUsersSection() {
-        JPanel card = UIComponents.card();
+        JPanel card = card();
         card.setLayout(new BorderLayout(0, 12));
         card.setBorder(new EmptyBorder(16, 18, 16, 18));
 
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
 
-        JPanel labels = new JPanel();
-        labels.setOpaque(false);
-        labels.setLayout(new BoxLayout(labels, BoxLayout.Y_AXIS));
         JLabel t = new JLabel("Gestión de usuarios");
-        t.setFont(UIComponents.fontBold(16));
-        t.setForeground(UIComponents.TXT);
-        JLabel s = new JLabel("Alta, consulta y control administrativo");
-        s.setFont(UIComponents.fontPlain(11));
-        s.setForeground(UIComponents.TXT3);
-        labels.add(t);
-        labels.add(Box.createVerticalStrut(2));
-        labels.add(s);
+        t.setFont(new Font("SansSerif", Font.BOLD, 16));
+        t.setForeground(TEXT);
 
-        addUserBtn = UIComponents.roundBtn("+ Nuevo usuario", UIComponents.ACCENT, Color.WHITE, null);
+        addUserBtn = new JButton("+ Nuevo usuario");
+        addUserBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
+        addUserBtn.setBackground(BLUE);
+        addUserBtn.setForeground(Color.WHITE);
+        addUserBtn.setOpaque(true);
+        addUserBtn.setBorderPainted(false);
+        addUserBtn.setFocusPainted(false);
+        addUserBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        header.add(labels,    BorderLayout.WEST);
+        header.add(t,          BorderLayout.WEST);
         header.add(addUserBtn, BorderLayout.EAST);
 
         String[] columns = {"Nombre", "Apellido", "Teléfono", "Correo", "Rol", "Dirección"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
-        JTable table = styledTable(tableModel);
-        JScrollPane scroll = new JScrollPane(table);
-        scroll.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIComponents.BORDER));
+        JScrollPane scroll = new JScrollPane(styledTable(tableModel));
+        scroll.setBorder(new MatteBorder(1, 0, 0, 0, BORDER_C));
 
         card.add(header, BorderLayout.NORTH);
         card.add(scroll, BorderLayout.CENTER);
         return card;
     }
 
-    // ── Section: Products ─────────────────────────────────────────────────────
-
     private JPanel buildProductsSection() {
-        JPanel card = UIComponents.card();
+        JPanel card = card();
         card.setLayout(new BorderLayout(0, 12));
         card.setBorder(new EmptyBorder(16, 18, 16, 18));
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
         JLabel t = new JLabel("Catálogo de productos");
-        t.setFont(UIComponents.fontBold(16));
-        t.setForeground(UIComponents.TXT);
-        JButton addProd = UIComponents.roundBtn("+ Nuevo producto", UIComponents.ACCENT, Color.WHITE, null);
-        header.add(t,       BorderLayout.WEST);
-        header.add(addProd, BorderLayout.EAST);
+        t.setFont(new Font("SansSerif", Font.BOLD, 16));
+        t.setForeground(TEXT);
 
         String[] cols = {"Nombre", "Precio", "Preparación", "Tipo", "Estado"};
         DefaultTableModel pm = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
-        JTable pt = styledTable(pm);
-        JScrollPane ps = new JScrollPane(pt);
-        ps.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIComponents.BORDER));
+        JScrollPane ps = new JScrollPane(styledTable(pm));
+        ps.setBorder(new MatteBorder(1, 0, 0, 0, BORDER_C));
 
-        card.add(header, BorderLayout.NORTH);
-        card.add(ps,     BorderLayout.CENTER);
+        card.add(t,  BorderLayout.NORTH);
+        card.add(ps, BorderLayout.CENTER);
         return card;
     }
 
-    // ── Section: Cuadrantes ───────────────────────────────────────────────────
-
     private JPanel buildCuadsSection() {
-        JPanel card = UIComponents.card();
+        JPanel card = card();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBorder(new EmptyBorder(16, 18, 16, 18));
 
         JLabel t = new JLabel("Cuadrantes de entrega");
-        t.setFont(UIComponents.fontBold(16));
-        t.setForeground(UIComponents.TXT);
+        t.setFont(new Font("SansSerif", Font.BOLD, 16));
+        t.setForeground(TEXT);
         t.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(t);
         card.add(Box.createVerticalStrut(14));
@@ -338,131 +274,145 @@ public class AdminView extends JFrame {
         grid.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         String[][] cuads = {
-            {"A", "Centro · Cabecera",    "$2.500"},
-            {"B", "Laureles · Cabecera",  "$3.500"},
-            {"C", "Floridablanca",        "$5.000"},
-            {"D", "Girón",               "$6.500"},
-            {"E", "Piedecuesta",         "$8.000"},
+            {"A", "Centro · Cabecera",   "$2.500"},
+            {"B", "Laureles · Cabecera", "$3.500"},
+            {"C", "Floridablanca",       "$5.000"},
+            {"D", "Girón",              "$6.500"},
+            {"E", "Piedecuesta",        "$8.000"},
         };
-        for (String[] c : cuads) {
-            grid.add(buildCuadCard(c[0], c[1], c[2]));
-        }
-        JPanel addCell = UIComponents.card();
-        addCell.setLayout(new BorderLayout());
-        addCell.setBorder(BorderFactory.createDashedBorder(UIComponents.BORDER, 4, 2));
-        JLabel addLbl = new JLabel("+ Agregar cuadrante", SwingConstants.CENTER);
-        addLbl.setFont(UIComponents.fontPlain(12));
-        addLbl.setForeground(UIComponents.TXT3);
-        addCell.add(addLbl, BorderLayout.CENTER);
-        grid.add(addCell);
+        for (String[] c : cuads) grid.add(buildCuadCell(c[0], c[1], c[2]));
+
+        JPanel ph = card();
+        ph.setLayout(new BorderLayout());
+        JLabel phLbl = new JLabel("+ Agregar cuadrante", SwingConstants.CENTER);
+        phLbl.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        phLbl.setForeground(TEXT3);
+        ph.add(phLbl, BorderLayout.CENTER);
+        grid.add(ph);
 
         card.add(grid);
         return card;
     }
 
-    private JPanel buildCuadCard(String name, String sub, String tarifa) {
-        JPanel c = UIComponents.card();
+    private JPanel buildCuadCell(String name, String sub, String tarifa) {
+        JPanel c = card();
         c.setLayout(new BoxLayout(c, BoxLayout.Y_AXIS));
+        c.setBorder(BorderFactory.createCompoundBorder(new LineBorder(BORDER_C), new EmptyBorder(10, 12, 10, 12)));
         JLabel nameLbl = new JLabel("Cuadrante " + name);
-        nameLbl.setFont(UIComponents.fontBold(13));
-        nameLbl.setForeground(UIComponents.TXT);
+        nameLbl.setFont(new Font("SansSerif", Font.BOLD, 13));
+        nameLbl.setForeground(TEXT);
         JLabel subLbl = new JLabel(sub);
-        subLbl.setFont(UIComponents.fontPlain(11));
-        subLbl.setForeground(UIComponents.TXT3);
+        subLbl.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        subLbl.setForeground(TEXT3);
         JLabel tarifaLbl = new JLabel("Tarifa: " + tarifa);
-        tarifaLbl.setFont(UIComponents.fontBold(12));
-        tarifaLbl.setForeground(UIComponents.TXT);
-        JButton editBtn = UIComponents.roundBtnSmall("Editar", UIComponents.BG, UIComponents.TXT, UIComponents.BORDER);
-        editBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        tarifaLbl.setFont(new Font("SansSerif", Font.BOLD, 12));
+        tarifaLbl.setForeground(TEXT);
         c.add(nameLbl);
         c.add(Box.createVerticalStrut(2));
         c.add(subLbl);
         c.add(Box.createVerticalStrut(6));
         c.add(tarifaLbl);
-        c.add(Box.createVerticalStrut(8));
-        c.add(editBtn);
         return c;
     }
 
-    // ── Section: Audit ────────────────────────────────────────────────────────
-
     private JPanel buildAuditSection() {
-        JPanel card = UIComponents.card();
+        JPanel card = card();
         card.setLayout(new BorderLayout(0, 12));
         card.setBorder(new EmptyBorder(16, 18, 16, 18));
 
         JLabel t = new JLabel("Bitácora de auditoría");
-        t.setFont(UIComponents.fontBold(16));
-        t.setForeground(UIComponents.TXT);
+        t.setFont(new Font("SansSerif", Font.BOLD, 16));
+        t.setForeground(TEXT);
 
         String[] cols = {"Fecha / hora", "Usuario", "Acción", "Detalle"};
         DefaultTableModel am = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
-        JTable at = styledTable(am);
-        JScrollPane as = new JScrollPane(at);
-        as.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIComponents.BORDER));
+        JScrollPane as = new JScrollPane(styledTable(am));
+        as.setBorder(new MatteBorder(1, 0, 0, 0, BORDER_C));
 
         card.add(t,  BorderLayout.NORTH);
         card.add(as, BorderLayout.CENTER);
         return card;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // SECTION SWITCHING
-    // ─────────────────────────────────────────────────────────────────────────
-
     private void showSection(String key) {
         if (sectionCards != null) sectionLayout.show(sectionCards, key);
         sectionTabs.forEach((k, btn) -> {
             boolean active = k.equals(key);
-            btn.setFont(active ? UIComponents.fontBold(13) : UIComponents.fontPlain(13));
-            btn.setForeground(active ? UIComponents.ACCENT : UIComponents.TXT2);
+            btn.setFont(new Font("SansSerif", active ? Font.BOLD : Font.PLAIN, 13));
+            btn.setForeground(active ? BLUE : TEXT2);
             btn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, active ? 2 : 0, 0, UIComponents.ACCENT),
+                new MatteBorder(0, 0, active ? 2 : 0, 0, BLUE),
                 new EmptyBorder(10, 14, 10, 14)
             ));
         });
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // STATUS BAR
-    // ─────────────────────────────────────────────────────────────────────────
-
     private JPanel buildStatusBar() {
         JPanel bar = new JPanel(new BorderLayout());
-        bar.setBackground(UIComponents.BG);
+        bar.setBackground(BG);
         bar.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(1, 0, 0, 0, UIComponents.BORDER),
+            new MatteBorder(1, 0, 0, 0, BORDER_C),
             new EmptyBorder(6, 18, 6, 18)
         ));
         statusLabel = new JLabel("Listo");
-        statusLabel.setFont(UIComponents.fontPlain(12));
-        statusLabel.setForeground(UIComponents.TXT2);
+        statusLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        statusLabel.setForeground(TEXT2);
         bar.add(statusLabel, BorderLayout.WEST);
         return bar;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // HELPERS
-    // ─────────────────────────────────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private JPanel card() {
+        JPanel p = new JPanel();
+        p.setBackground(BG);
+        return p;
+    }
+
+    private JPanel metricTile(String label, String value) {
+        JPanel p = new JPanel();
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+        p.setBackground(BG);
+        p.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(BORDER_C), new EmptyBorder(10, 12, 10, 12)));
+        JLabel lbl = new JLabel(label);
+        lbl.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        lbl.setForeground(TEXT2);
+        JLabel val = new JLabel(value);
+        val.setFont(new Font("SansSerif", Font.BOLD, 22));
+        val.setForeground(TEXT);
+        p.add(lbl);
+        p.add(Box.createVerticalStrut(4));
+        p.add(val);
+        return p;
+    }
 
     private JTable styledTable(DefaultTableModel model) {
         JTable table = new JTable(model);
         table.setRowHeight(28);
-        table.setFont(UIComponents.fontPlain(12));
-        table.setForeground(UIComponents.TXT);
-        table.setBackground(UIComponents.BG);
+        table.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        table.setForeground(TEXT);
+        table.setBackground(BG);
         table.setShowGrid(false);
         table.setIntercellSpacing(new Dimension(0, 0));
-        table.getTableHeader().setFont(UIComponents.fontBold(12));
-        table.getTableHeader().setForeground(UIComponents.TXT2);
-        table.getTableHeader().setBackground(UIComponents.BG2);
-        table.getTableHeader().setBorder(
-            BorderFactory.createMatteBorder(0, 0, 1, 0, UIComponents.BORDER));
-        table.setSelectionBackground(UIComponents.INFO_BG);
-        table.setSelectionForeground(UIComponents.TXT);
+        table.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
+        table.getTableHeader().setForeground(TEXT2);
+        table.getTableHeader().setBackground(BG2);
+        table.getTableHeader().setBorder(new MatteBorder(0, 0, 1, 0, BORDER_C));
+        table.setSelectionBackground(BLUE_BG);
+        table.setSelectionForeground(TEXT);
         return table;
+    }
+
+    private JTextField field(String placeholder) {
+        JTextField f = new JTextField(placeholder);
+        f.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        f.setForeground(TEXT2);
+        f.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(BORDER_C), new EmptyBorder(6, 10, 6, 10)));
+        return f;
     }
 
     private JPanel labeled(String text, JComponent component) {
@@ -470,17 +420,15 @@ public class AdminView extends JFrame {
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setOpaque(false);
         JLabel label = new JLabel(text);
-        label.setFont(UIComponents.fontBold(12));
-        label.setForeground(UIComponents.TXT2);
+        label.setFont(new Font("SansSerif", Font.BOLD, 12));
+        label.setForeground(TEXT2);
         panel.add(label);
         panel.add(Box.createVerticalStrut(6));
         panel.add(component);
         return panel;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // PUBLIC API (same contract as before)
-    // ─────────────────────────────────────────────────────────────────────────
+    // ── Public API ─────────────────────────────────────────────────────────────
 
     public void addLogoutListener(Runnable action) { logoutBtn.addActionListener(e -> action.run()); }
 
@@ -492,28 +440,29 @@ public class AdminView extends JFrame {
         dialog.setLocationRelativeTo(frame);
 
         JPanel root = new JPanel(new BorderLayout());
-        root.setBackground(UIComponents.BG2);
+        root.setBackground(BG2);
         root.setBorder(new EmptyBorder(16, 16, 16, 16));
 
         JPanel form = new JPanel(new GridLayout(0, 2, 12, 10));
         form.setOpaque(false);
 
-        JTextField nombre     = UIComponents.styledField("Nombre");
-        JTextField apellido   = UIComponents.styledField("Apellido");
-        JTextField telefono   = UIComponents.styledField("Teléfono");
-        JTextField correo     = UIComponents.styledField("Correo");
-        JPasswordField clave  = new JPasswordField();
-        clave.setFont(UIComponents.fontPlain(13));
-        clave.setBorder(new EmptyBorder(8, 10, 8, 10));
+        JTextField nombre    = field("Nombre");
+        JTextField apellido  = field("Apellido");
+        JTextField telefono  = field("Teléfono");
+        JTextField correo    = field("Correo");
+        JPasswordField clave = new JPasswordField();
+        clave.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        clave.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(BORDER_C), new EmptyBorder(6, 10, 6, 10)));
         JComboBox<String> rol = new JComboBox<>(
             new String[]{"CLIENTE", "OPERADOR", "ADMIN", "COCINA", "ENTREGA", "SERVER"});
 
-        JTextField calle     = UIComponents.styledField("Calle");
-        JTextField carrera   = UIComponents.styledField("Carrera/Avenida");
-        JTextField numero    = UIComponents.styledField("Número");
-        JTextField casa      = UIComponents.styledField("Casa/Apto");
-        JTextField barrio    = UIComponents.styledField("Barrio");
-        JTextField municipio = UIComponents.styledField("Municipio");
+        JTextField calle     = field("Calle");
+        JTextField carrera   = field("Carrera/Avenida");
+        JTextField numero    = field("Número");
+        JTextField casa      = field("Casa/Apto");
+        JTextField barrio    = field("Barrio");
+        JTextField municipio = field("Municipio");
 
         JPanel addrPanel = new JPanel(new GridLayout(0, 2, 10, 8));
         addrPanel.setOpaque(false);
@@ -538,10 +487,16 @@ public class AdminView extends JFrame {
         bottom.setOpaque(false);
         bottom.setBorder(new EmptyBorder(10, 0, 0, 0));
         JLabel error = new JLabel(" ");
-        error.setForeground(UIComponents.DANGER);
-        error.setFont(UIComponents.fontPlain(12));
+        error.setForeground(DANGER);
+        error.setFont(new Font("SansSerif", Font.PLAIN, 12));
 
-        JButton save = UIComponents.roundBtn("Guardar", UIComponents.ACCENT, Color.WHITE, null);
+        JButton save = new JButton("Guardar");
+        save.setFont(new Font("SansSerif", Font.BOLD, 13));
+        save.setBackground(BLUE);
+        save.setForeground(Color.WHITE);
+        save.setOpaque(true);
+        save.setBorderPainted(false);
+        save.setFocusPainted(false);
         save.addActionListener(e -> {
             String n = nombre.getText().trim();
             String a = apellido.getText().trim();
@@ -549,7 +504,6 @@ public class AdminView extends JFrame {
             String c = correo.getText().trim();
             String p = new String(clave.getPassword()).trim();
             String r = String.valueOf(rol.getSelectedItem());
-
             if (n.isBlank() || a.isBlank() || t.isBlank() || c.isBlank() || p.isBlank()) {
                 error.setText("Nombre, apellido, teléfono, correo y contraseña son obligatorios.");
                 return;

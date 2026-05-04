@@ -46,7 +46,6 @@ public class ClientFactory {
         OrderController orderController = new OrderController(model, view);
         OperatorController operatorController = new OperatorController(model, view, productController, orderController);
         AdminController adminController = new AdminController(model, adminView);
-        adminController.init();
 
         ViewRouter router = new ViewRouter(loginView, view, adminView, kitchenView, deliveryView);
 
@@ -63,6 +62,6 @@ public class ClientFactory {
             router.showLogin();
         });
 
-        return new AuthClientController(model, loginView, operatorController, router);
+        return new AuthClientController(model, loginView, operatorController, adminController, router);
     }
 }

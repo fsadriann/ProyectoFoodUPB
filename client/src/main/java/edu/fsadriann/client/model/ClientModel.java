@@ -154,6 +154,9 @@ public class ClientModel extends Subject {
                 updateLogger("No se pudo registrar el usuario operativo.");
                 return false;
             }
+            // Agregar también a UserService para que aparezca en listarUsuarios()
+            // y para que registrarCredencial() pueda encontrar al usuario.
+            try { userService.registrarCliente(user); } catch (Exception ignored) {}
             userService.registrarCredencial(user.getCedula(), contrasena);
             updateLogger("Usuario operativo registrado correctamente.");
             return true;
@@ -203,6 +206,7 @@ public class ClientModel extends Subject {
             updateLogger("Catálogo cargado.");
             return products;
         } catch (Exception e) {
+            e.printStackTrace();
             updateLogger("Error al listar productos: " + e.getMessage());
             return new LinkedList<>();
         }

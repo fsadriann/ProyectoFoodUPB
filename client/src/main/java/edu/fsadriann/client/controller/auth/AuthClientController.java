@@ -1,5 +1,6 @@
 package edu.fsadriann.client.controller.auth;
 
+import edu.fsadriann.client.controller.admin.AdminController;
 import edu.fsadriann.client.controller.operator.OperatorController;
 import edu.fsadriann.client.model.ClientModel;
 import edu.fsadriann.client.router.ViewRouter;
@@ -10,12 +11,17 @@ public class AuthClientController {
     private final ClientModel model;
     private final LoginView loginView;
     private final OperatorController operatorController;
+    private final AdminController adminController;
     private final ViewRouter viewRouter;
 
-    public AuthClientController(ClientModel model, LoginView loginView, OperatorController operatorController, ViewRouter viewRouter) {
+    public AuthClientController(ClientModel model, LoginView loginView,
+                                OperatorController operatorController,
+                                AdminController adminController,
+                                ViewRouter viewRouter) {
         this.model = model;
         this.loginView = loginView;
         this.operatorController = operatorController;
+        this.adminController = adminController;
         this.viewRouter = viewRouter;
     }
 
@@ -45,9 +51,14 @@ public class AuthClientController {
 
         loginView.setMessage("Acceso concedido.");
         loginView.setVisible(false);
+
         if (role == Rol.OPERADOR) {
             operatorController.init();
         }
+        if (role == Rol.ADMIN) {
+            adminController.init();
+        }
+
         viewRouter.show(role);
     }
 

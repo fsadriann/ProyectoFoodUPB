@@ -94,7 +94,7 @@ public class UserService implements UserInterface {
         Iterator<User> it = clientes.iterator();
         while (it.hasNext()) {
             User u = it.next();
-            if (u != null && telefono.equals(String.valueOf(u.getTelefono()))) {
+            if (u != null && telefono.equals(u.getTelefono())) {
                 return u;
             }
         }
@@ -105,7 +105,8 @@ public class UserService implements UserInterface {
     public User registrarCliente(User user) throws RemoteException {
         if (user == null) return null;
 
-        if (buscarClientePorTelefono(String.valueOf(user.getTelefono())) != null) {
+        // ✅ Corregido: getTelefono() ya es String, no necesita String.valueOf()
+        if (buscarClientePorTelefono(user.getTelefono()) != null) {
             throw new IllegalArgumentException(
                     "Teléfono ya registrado: " + user.getTelefono());
         }
@@ -155,9 +156,7 @@ public class UserService implements UserInterface {
         if (cedula == null) return false;
         boolean removed = clientes.remove(u -> cedula.equals(u.getCedula()));
         if (removed) {
-            // Limpiar credencial
             credenciales.remove(c -> c != null && cedula.equals(c.cedula));
-            // Invalidar todas las sesiones del usuario eliminado
             sesionesActivas.remove(s -> s != null && cedula.equals(s.cedula));
         }
         return removed;
@@ -182,14 +181,10 @@ public class UserService implements UserInterface {
 
         int total = 0;
         for (Order pedido : pedidos) {
-            if (pedido == null) {
-                continue;
-            }
+            if (pedido == null) continue;
             resultado.add(pedido);
             total++;
-            if (total == 10) {
-                break;
-            }
+            if (total == 10) break;
         }
         return resultado;
     }
@@ -254,7 +249,7 @@ public class UserService implements UserInterface {
                 Rol.OPERADOR,
                 "1001",
                 false,
-                300123456,
+                "3001234560",
                 "Campus UPB",
                 null
         );
@@ -263,10 +258,10 @@ public class UserService implements UserInterface {
                 "cliente@upb.com",
                 "Cliente",
                 "Demo",
-            Rol.CLIENTE,
+                Rol.CLIENTE,
                 "2001",
                 true,
-                300765432,
+                "3007654325",
                 "Cra 1 # 1-1",
                 null
         );
@@ -278,7 +273,7 @@ public class UserService implements UserInterface {
                 Rol.ADMIN,
                 "1234",
                 true,
-                300765432,
+                "3007654324",
                 "Cra 1 # 1-1",
                 null
         );
@@ -290,7 +285,7 @@ public class UserService implements UserInterface {
                 Rol.COCINA,
                 "3001",
                 false,
-                300555111,
+                "3106189693",
                 "Central de cocina",
                 null
         );
@@ -302,7 +297,7 @@ public class UserService implements UserInterface {
                 Rol.ENTREGA,
                 "4001",
                 false,
-                300555222,
+                "3001555222",
                 "Zona de reparto",
                 null
         );
@@ -314,7 +309,7 @@ public class UserService implements UserInterface {
                 Rol.SERVER,
                 "5001",
                 false,
-                300555333,
+                "3005553334",
                 "Panel operativo",
                 null
         );

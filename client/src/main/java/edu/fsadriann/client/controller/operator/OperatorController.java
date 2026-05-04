@@ -9,6 +9,7 @@ import edu.fsadriann.server.model.order.Order;
 import edu.fsadriann.server.model.product.Product;
 import edu.fsadriann.server.model.user.User;
 import edu.fsadriann.view.operator.OperatorView;
+import edu.fsadriann.view.operator.RegisterClientDialog;
 
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -43,6 +44,7 @@ public class OperatorController {
 			});
 
 			view.addSearchClientListener(this::handleSearchClient);
+			view.addLoadProductsListener(this::obtenerProductos);
 			view.addGenerateInvoiceListener(() -> orderController.generateInvoice());
 			view.addRemoveProductListener(() -> orderController.removeSelectedProduct());
 			view.addChangeQuantityListener(() -> orderController.changeSelectedProductQuantity());
@@ -64,8 +66,12 @@ public class OperatorController {
 		}
 
 		view.setRegisterEnabled(model.isConnected());
-		productController.loadCatalog();
+		obtenerProductos();
 		view.setMessage(model.isConnected() ? "Conectado al servidor." : "No hay conexion con el servidor.");
+	}
+
+	public void obtenerProductos() {
+		productController.loadCatalog();
 	}
 
 	public void show() {
@@ -96,9 +102,11 @@ public class OperatorController {
 		}
 
 		User client = model.buscarClientePorTelefono(phone);
+
 		if (client == null) {
-			view.showError("No se encontró un cliente con ese teléfono.");
-			return;
+			// Abre el formulario directamente con el teléfono prellenado
+			client = handleRegisterClient(phone);
+			if (client == null) return; // operador cerró el diálogo
 		}
 
 		model.setCurrentClient(client);
@@ -107,12 +115,27 @@ public class OperatorController {
 
 		view.getClientTableModel().setRowCount(0);
 		view.getClientTableModel().addRow(new Object[]{
-			client.getNombreCompleto().trim(),
-			client.getId(),
-			String.valueOf(client.getTelefono())
+				client.getNombreCompleto().trim(),
+				client.getId(),
+				String.valueOf(client.getTelefono())
 		});
 		view.showTab(1);
 		view.setMessage("Cliente cargado y pedido iniciado.");
+	}
+
+	private User handleRegisterClient(String phone) {
+		RegisterClientDialog dialog = new RegisterClientDialog(view, phone);
+		dialog.setVisible(true);
+
+		User newUser = dialog.getResult();
+		if (newUser == null) return null;
+
+		User registered = model.registrarCliente(newUser);
+		if (registered == null) {
+			view.showError("No se pudo registrar el cliente.\n" + model.getLogger());
+			return null;
+		}
+		return registered;
 	}
 
 	private void loadFrequentOrders(User client) {
