@@ -18,12 +18,11 @@ public class DeliveryService implements DeliveryInterface {
     }
 
     @Override
-    public Delivery asignarPedidoARepartidor(String orderId, String repartidorId, CuadranteInterface cs, OrderService os) {
+    public Delivery asignarPedidoARepartidor(String orderId, String repartidorId, OrderService os) {
         // Validar entradas básicas
         if (orderId == null) return null;
         if (repartidorId == null || repartidorId.isBlank())
             throw new IllegalArgumentException("El repartidorId no puede ser nulo ni vacío.");
-
 
         if (yaEstaAsignado(orderId)) return null;
         try {
@@ -32,8 +31,8 @@ public class DeliveryService implements DeliveryInterface {
             if (pedido.getEstado() != EstadoPedido.LISTO) return null;
             if (pedido.getCuadranteDestino() == null) return null;
 
-            var ruta = os.calcularRutaEntrega(orderId, cs);
-            if (ruta == null) return null; // no hay ruta en el grafo
+            LinkedList<String> ruta = os.calcularRutaEntrega(orderId);
+            if (ruta == null) return null;
 
             Delivery delivery = new Delivery(orderId, repartidorId, ruta);
             entregas.add(delivery);

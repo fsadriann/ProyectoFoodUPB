@@ -1,12 +1,16 @@
 package edu.fsadriann.server.model;
 
 import java.rmi.Naming;
+import java.rmi.Remote;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 
-import edu.fsadriann.server.model.ticket.TicketInterface;
-import edu.fsadriann.server.model.ticket.TicketService;
+import edu.fsadriann.server.model.admin.AdminService;
+import edu.fsadriann.server.model.order.KitchenService;
+import edu.fsadriann.server.model.order.OrderService;
+import edu.fsadriann.server.model.product.ProductService;
+import edu.fsadriann.server.model.user.UserService;
 
 public class ServerModel {
 
@@ -15,7 +19,14 @@ public class ServerModel {
     private String serviceName;
     private String uri;
     private Registry registry;
+    private boolean createdRegistry = false;
     private boolean running = false;
+
+    private UserService userService;
+    private ProductService productService;
+    private OrderService orderService;
+    private KitchenService kitchenService;
+    private AdminService adminService;
 
     public ServerModel(String ip, int port, String serviceName) {
         this.ip = ip;
@@ -27,9 +38,34 @@ public class ServerModel {
     public boolean deploy() {
         try {
             System.setProperty("java.rmi.server.hostname", ip);
-            TicketInterface service = new TicketService();
-            registry = LocateRegistry.createRegistry(port);
-            Naming.rebind(uri, service);
+
+            orderService = new OrderService();
+            userService = new UserService(orderService);
+            productService = new ProductService();
+            kitchenService = new KitchenService(orderService);
+            adminService = new AdminService();
+
+            // Intentar reusar un Registry existente antes de crear uno nuevo.
+            try {
+                registry = LocateRegistry.getRegistry(port);
+                // Intentar listar para comprobar conexión
+                registry.list();
+                System.out.println("Servidor RMI ya activo, reutilizando instancia...");
+                createdRegistry = false;
+            } catch (Exception ex) {
+                // No hay registry accesible -> crear uno nuevo
+                registry = LocateRegistry.createRegistry(port);
+                createdRegistry = true;
+                System.out.println("Servidor RMI iniciado correctamente en " + ip + ":" + port);
+            }
+
+            // Bind/replace services (rebind para evitar problemas si ya existían nombres)
+            bindService("-users", userService);
+            bindService("-products", productService);
+            bindService("-orders", orderService);
+            bindService("-kitchen", kitchenService);
+            bindService("-admin", adminService);
+
             running = true;
             return true;
         } catch (Exception e) {
@@ -40,14 +76,36 @@ public class ServerModel {
 
     public boolean stop() {
         try {
-            Naming.unbind(uri);
-            UnicastRemoteObject.unexportObject(registry, true);
+            Naming.unbind(uri + "-users");
+            Naming.unbind(uri + "-products");
+            Naming.unbind(uri + "-orders");
+            Naming.unbind(uri + "-kitchen");
+            Naming.unbind(uri + "-admin");
+
+            if (userService != null) UnicastRemoteObject.unexportObject(userService, true);
+            if (productService != null) UnicastRemoteObject.unexportObject(productService, true);
+            if (orderService != null) UnicastRemoteObject.unexportObject(orderService, true);
+            if (kitchenService != null) UnicastRemoteObject.unexportObject(kitchenService, true);
+            if (adminService != null) UnicastRemoteObject.unexportObject(adminService, true);
+
+            // Solo unexport si el registry fue creado por este proceso
+            if (createdRegistry && registry != null) {
+                try {
+                    UnicastRemoteObject.unexportObject(registry, true);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
             running = false;
             return true;
         } catch (Exception e) {
             e.printStackTrace();
             return false;
         }
+    }
+
+    private void bindService(String suffix, Remote service) throws Exception {
+        Naming.rebind(uri + suffix, UnicastRemoteObject.exportObject(service, 0));
     }
 
     public boolean isRunning() {

@@ -10,8 +10,8 @@ import edu.fsadriann.server.factory.ServerFactory;
 public class App {
     public static void main(String[] args) {
         try {
-            ServerController server = ServerFactory.create();
-            server.init();
+            ServerController controller = ServerFactory.create();
+            controller.show();
         } catch (Exception e) {
             System.err.println("Failed to start the server application: " + e.getMessage());
         }

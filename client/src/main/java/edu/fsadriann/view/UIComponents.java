@@ -8,13 +8,27 @@ public class UIComponents {
 
     // ── COLORES GLOBALES ──────────────────────────────────────────────────────
 
-    public static final Color BG     = Color.WHITE;
-    public static final Color BG2    = new Color(247, 247, 245);
-    public static final Color BORDER = new Color(225, 225, 222);
-    public static final Color TXT    = new Color(20, 20, 20);
-    public static final Color TXT2   = new Color(110, 110, 108);
-    public static final Color TXT3   = new Color(170, 170, 168);
-    public static final Color DANGER = new Color(180, 40, 40);
+    public static final Color BG          = Color.WHITE;
+    public static final Color BG2         = new Color(247, 247, 245);
+    public static final Color BORDER      = new Color(225, 225, 222);
+    public static final Color TXT         = new Color(20, 20, 20);
+    public static final Color TXT2        = new Color(110, 110, 108);
+    public static final Color TXT3        = new Color(170, 170, 168);
+    public static final Color ACCENT      = new Color(24, 95, 165);
+    public static final Color ACCENT_DARK = new Color(12, 68, 124);
+    public static final Color SUCCESS     = new Color(29, 158, 117);
+    public static final Color INFO        = new Color(55, 138, 221);
+    public static final Color WARNING     = new Color(239, 159, 39);
+    public static final Color DANGER      = new Color(163, 45, 45);
+    public static final Color PREMIUM_BG  = new Color(250, 238, 218);
+    public static final Color PREMIUM_FG  = new Color(99, 56, 6);
+    public static final Color SUCCESS_BG   = new Color(225, 245, 238);
+    public static final Color SUCCESS_FG   = new Color(8, 80, 65);
+    public static final Color INFO_BG      = new Color(230, 241, 251);
+    public static final Color INFO_FG      = new Color(12, 68, 124);
+    public static final Color WARNING_BG   = new Color(250, 238, 218);
+    public static final Color WARNING_FG   = new Color(99, 56, 6);
+    public static final Color DANGER_BG    = new Color(251, 236, 236);
 
     // ── FUENTES ───────────────────────────────────────────────────────────────
 
@@ -112,6 +126,54 @@ public class UIComponents {
         label.setForeground(TXT2);
         label.setAlignmentX(Component.LEFT_ALIGNMENT);
         return label;
+    }
+
+    public static JLabel badge(String text, Color background, Color foreground) {
+        JLabel label = new JLabel(text, SwingConstants.CENTER);
+        label.setFont(fontBold(11));
+        label.setOpaque(true);
+        label.setBackground(background);
+        label.setForeground(foreground);
+        label.setBorder(new EmptyBorder(3, 9, 3, 9));
+        return label;
+    }
+
+    public static JPanel metricCard(String label, String value, String subtitle) {
+        JPanel panel = card();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+
+        JLabel title = new JLabel(label);
+        title.setFont(fontPlain(12));
+        title.setForeground(TXT2);
+
+        JLabel metric = new JLabel(value);
+        metric.setFont(fontBold(24));
+        metric.setForeground(TXT);
+
+        JLabel detail = new JLabel(subtitle);
+        detail.setFont(fontPlain(11));
+        detail.setForeground(TXT3);
+
+        panel.add(title);
+        panel.add(Box.createVerticalStrut(4));
+        panel.add(metric);
+        panel.add(Box.createVerticalStrut(4));
+        panel.add(detail);
+        panel.add(Box.createVerticalGlue());
+        return panel;
+    }
+
+    public static JPanel sectionCard(String titleText, JComponent body) {
+        JPanel panel = card();
+        panel.setLayout(new BorderLayout(0, 12));
+
+        JLabel title = new JLabel(titleText);
+        title.setFont(fontBold(14));
+        title.setForeground(TXT);
+
+        panel.add(title, BorderLayout.NORTH);
+        panel.add(body, BorderLayout.CENTER);
+        return panel;
     }
 
     // ── TOPBAR ────────────────────────────────────────────────────────────────

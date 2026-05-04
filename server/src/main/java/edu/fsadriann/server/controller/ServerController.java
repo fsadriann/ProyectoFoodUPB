@@ -3,6 +3,8 @@ package edu.fsadriann.server.controller;
 import edu.fsadriann.server.model.ServerModel;
 import edu.fsadriann.server.view.ServerView;
 
+import java.lang.reflect.Method;
+
 public class ServerController {
 
     private ServerModel model;
@@ -36,7 +38,23 @@ public class ServerController {
                         }
                     }
                     return null;
-                }
+                },
+                this::openClientLogin
         );
+    }
+
+    public void show() {
+        init();
+    }
+
+    private void openClientLogin() {
+        try {
+            Class<?> clientApp = Class.forName("edu.fsadriann.App");
+            Method main = clientApp.getMethod("main", String[].class);
+            main.invoke(null, (Object) new String[0]);
+            view.setMessage("Login abierto.");
+        } catch (Exception e) {
+            view.setMessage("No fue posible abrir Login: " + e.getMessage());
+        }
     }
 }

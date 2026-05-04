@@ -3,6 +3,7 @@ package edu.fsadriann.server.model.order;
 import edu.fsadriann.app.linkedlist.singly.singly.LinkedList;
 import edu.fsadriann.server.model.product.Product;
 
+import java.io.Serializable;
 import java.util.UUID;
 
 /**
@@ -13,7 +14,9 @@ import java.util.UUID;
  *
  * @author fsadriann
  */
-public class Order {
+public class Order implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     /** Identificador único del pedido (UUID). */
     private final String orderId;

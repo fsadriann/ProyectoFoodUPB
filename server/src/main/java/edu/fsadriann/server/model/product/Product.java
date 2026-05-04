@@ -1,6 +1,10 @@
 package edu.fsadriann.server.model.product;
 
-public class Product {
+import java.io.Serializable;
+
+public class Product implements Serializable {
+
+    private static final long serialVersionUID = 1L;
     private String productoId;
     private String nombre;
     private String descripcion;

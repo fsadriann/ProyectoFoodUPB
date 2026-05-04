@@ -1,8 +1,17 @@
 package edu.fsadriann.client.factory;
 
-import edu.fsadriann.client.controller.ClientController;
+import edu.fsadriann.client.controller.admin.AdminController;
+import edu.fsadriann.client.controller.auth.AuthClientController;
+import edu.fsadriann.client.controller.operator.OperatorController;
+import edu.fsadriann.client.controller.order.OrderController;
+import edu.fsadriann.client.controller.product.ProductController;
+import edu.fsadriann.client.router.ViewRouter;
 import edu.fsadriann.client.model.ClientModel;
-import edu.fsadriann.view.ClientView;
+import edu.fsadriann.view.auth.LoginView;
+import edu.fsadriann.view.admin.AdminView;
+import edu.fsadriann.view.delivery.DeliveryView;
+import edu.fsadriann.view.kitchen.KitchenView;
+import edu.fsadriann.view.operator.OperatorView;
 import edu.fsadriann.environment.Environment;
 
 public class ClientFactory {
@@ -10,7 +19,7 @@ public class ClientFactory {
     private ClientFactory() {
     }
 
-    public static ClientController create() {
+    public static AuthClientController create() {
 
         Environment env = null;
 
@@ -25,20 +34,35 @@ public class ClientFactory {
         }
 
         ClientModel model = new ClientModel(env.getIp(), env.getPort(), env.getServiceName());
-        if (model == null) {
-            throw new IllegalStateException("Failed to create ClientModel");
-        }
 
         String operadorEmail = System.getProperty("user.email", System.getenv().getOrDefault("USER_EMAIL", "Operador"));
-        ClientView view = new ClientView(operadorEmail);
-        if (view == null) {
-            throw new IllegalStateException("Failed to create ClientView");
-        }
+        LoginView loginView = new LoginView(operadorEmail);
+        OperatorView view = new OperatorView(operadorEmail);
+        AdminView adminView = new AdminView(operadorEmail);
+        KitchenView kitchenView = new KitchenView(operadorEmail);
+        DeliveryView deliveryView = new DeliveryView(operadorEmail);
 
-        ClientController controller = new ClientController(model, view);
-        if (controller == null) {
-            throw new IllegalStateException("Failed to create ClientController");
-        }
-        return controller;
+        ProductController productController = new ProductController(model, view);
+        OrderController orderController = new OrderController(model, view);
+        OperatorController operatorController = new OperatorController(model, view, productController, orderController);
+        AdminController adminController = new AdminController(model, adminView);
+        adminController.init();
+
+        ViewRouter router = new ViewRouter(loginView, view, adminView, kitchenView, deliveryView);
+
+        adminView.addLogoutListener(() -> {
+            model.logout();
+            router.showLogin();
+        });
+        kitchenView.addLogoutListener(() -> {
+            model.logout();
+            router.showLogin();
+        });
+        deliveryView.addLogoutListener(() -> {
+            model.logout();
+            router.showLogin();
+        });
+
+        return new AuthClientController(model, loginView, operatorController, router);
     }
 }

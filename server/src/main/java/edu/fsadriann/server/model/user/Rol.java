@@ -6,8 +6,10 @@ package edu.fsadriann.server.model.user;
  * @author fsadriann
  */
 public enum Rol {
+    ADMIN,
     OPERADOR,
-    COCINERO,
-    REPARTIDOR,
-    ADMINISTRADOR
+    CLIENTE,
+    COCINA,
+    ENTREGA,
+    SERVER
 }

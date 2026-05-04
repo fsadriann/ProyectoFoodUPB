@@ -1,5 +1,8 @@
 package edu.fsadriann.server.model.order;
 
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+
 /**
  * Contrato del servicio de cocina con gestión real de estaciones. RF-05.
  *
@@ -21,7 +24,7 @@ package edu.fsadriann.server.model.order;
  *
  * @author fsadriann
  */
-public interface KitchenInterface {
+public interface KitchenInterface extends Remote {
 
     /**
      * Encola un pedido según prioridad (premium=0, estándar=1).
@@ -30,7 +33,7 @@ public interface KitchenInterface {
      * @throws IllegalArgumentException si el pedido es nulo
      * @throws IllegalStateException    si el estado es CANCELADO o ENTREGADO
      */
-    void encolarPedido(Order pedido);
+    void encolarPedido(Order pedido) throws RemoteException;
 
     /**
      * Intenta asignar el pedido de mayor prioridad a un fogón compatible libre.
@@ -43,7 +46,7 @@ public interface KitchenInterface {
      *
      * @return pedido asignado (ahora en {@code EN_PREPARACION}), o {@code null} si no pudo asignar
      */
-    Order procesarSiguientePedido();
+    Order procesarSiguientePedido() throws RemoteException;
 
     /**
      * Marca un pedido como listo, libera su fogón y procesa el siguiente en cola.
@@ -56,7 +59,7 @@ public interface KitchenInterface {
      * @throws IllegalStateException    si el pedido no está en ningún fogón
      *                                  o no está en {@code EN_PREPARACION}
      */
-    boolean marcarPedidoListo(String pedidoId);
+    boolean marcarPedidoListo(String pedidoId) throws RemoteException;
 
     /**
      * Retorna una descripción del estado de ocupación de cada fogón.
@@ -64,11 +67,11 @@ public interface KitchenInterface {
      *
      * @return texto con estado de los 4 fogones
      */
-    String obtenerEstadoFogones();
+    String obtenerEstadoFogones() throws RemoteException;
 
     /** @return número de pedidos en cola (sin contar los ya asignados a fogones) */
-    int tamanoCola();
+    int tamanoCola() throws RemoteException;
 
     /** @return {@code true} si no hay pedidos esperando en la cola */
-    boolean colaVacia();
+    boolean colaVacia() throws RemoteException;
 }

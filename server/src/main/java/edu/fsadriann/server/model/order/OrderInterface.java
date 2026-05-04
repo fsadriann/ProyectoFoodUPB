@@ -1,7 +1,8 @@
 package edu.fsadriann.server.model.order;
 
-import edu.fsadriann.server.model.cuadrante.CuadranteInterface;
+import edu.fsadriann.server.model.product.Product;
 
+import java.rmi.Remote;
 import java.rmi.RemoteException;
 
 /**
@@ -16,10 +17,14 @@ import java.rmi.RemoteException;
  *
  * @author fsadriann
  */
-public interface OrderInterface {
+public interface OrderInterface extends Remote {
     Order crearPedido(String cedulaCliente, boolean isPremium) throws RemoteException; // RF-02
 
     void enviarPedidoACocina(Order pedido) throws RemoteException; // RF-02
+
+    boolean agregarProducto(String pedidoId, Product product) throws RemoteException;
+
+    boolean quitarProducto(String pedidoId, Product product) throws RemoteException;
 
     Order buscarPedido(String pedidoId) throws RemoteException; // RF-04
 
@@ -28,6 +33,8 @@ public interface OrderInterface {
     boolean cancelarPedido(String pedidoId) throws RemoteException; // RF-04
 
     double calcularFactura(Order pedido) throws RemoteException; // RF-03
+
+    edu.fsadriann.app.linkedlist.singly.singly.LinkedList<Order> getPedidosPorCliente(String cedula) throws RemoteException;
 
     // ── RF-13 — Rutas de entrega ──────────────────────────────────────────────
 
@@ -42,7 +49,8 @@ public interface OrderInterface {
      *         no existe, el cuadrante no existe, o el pedido está CANCELADO
      * @throws IllegalArgumentException si {@code nombreCuadrante} es nulo o vacío
      */
-    boolean asignarCuadranteDestino(String orderId, String nombreCuadrante, CuadranteInterface cs);
+
+    boolean asignarCuadranteDestino(String orderId, String nombreCuadrante) throws RemoteException;
 
     /**
      * Calcula la ruta óptima de entrega desde la base
@@ -50,14 +58,11 @@ public interface OrderInterface {
      * hasta el cuadrante de destino del pedido, usando Dijkstra.
      *
      * @param orderId UUID del pedido con cuadranteDestino ya asignado
-     * @param cs      servicio de cuadrantes con el grafo de rutas
      * @return lista ordenada de nombres de cuadrantes en la ruta óptima,
      *         o {@code null} si el pedido no existe, está cancelado,
      *         no tiene destino asignado, o no hay ruta disponible
      */
-    edu.fsadriann.app.linkedlist.singly.singly.LinkedList<String> calcularRutaEntrega(
-            String orderId, CuadranteInterface cs);
-
+    edu.fsadriann.app.linkedlist.singly.singly.LinkedList<String> calcularRutaEntrega(String orderId) throws RemoteException;
     // ── RF-13-C / RF-13-D — Transiciones de estado para entrega ──────────────
 
     /**
@@ -70,7 +75,7 @@ public interface OrderInterface {
      * @return {@code true} si la transición fue exitosa
      * @throws IllegalStateException si el estado actual no es LISTO
      */
-    boolean marcarEnCamino(String orderId);
+    boolean marcarEnCamino(String orderId) throws RemoteException;
 
     /**
      * Transición estricta {@link EstadoPedido#EN_CAMINO} →
@@ -82,7 +87,7 @@ public interface OrderInterface {
      * @return {@code true} si la transición fue exitosa
      * @throws IllegalStateException si el estado actual no es EN_CAMINO
      */
-    boolean marcarEntregado(String orderId);
+    boolean marcarEntregado(String orderId) throws RemoteException;
 
     /**
      * Transición estricta {@link EstadoPedido#EN_PREPARACION} →
@@ -103,5 +108,5 @@ public interface OrderInterface {
      *         no existe
      * @throws IllegalStateException si el estado actual no es EN_PREPARACION
      */
-    boolean marcarListo(String orderId);
+    boolean marcarListo(String orderId) throws RemoteException;
 }

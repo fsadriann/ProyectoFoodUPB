@@ -1,6 +1,10 @@
 package edu.fsadriann.server.model.cuadrante;
 
-public class Cuadrante {
+import java.io.Serializable;
+
+public class Cuadrante implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     /** Identificador único. Es la clave del grafo — debe ser irrepetible. */
     private String nombre;

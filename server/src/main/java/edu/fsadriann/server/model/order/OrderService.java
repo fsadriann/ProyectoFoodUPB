@@ -1,7 +1,6 @@
 package edu.fsadriann.server.model.order;
 
 import edu.fsadriann.app.linkedlist.doubly.doubly.LinkedList;
-import edu.fsadriann.server.model.cuadrante.CuadranteInterface;
 import edu.fsadriann.server.model.product.Product;
 import edu.fsadriann.model.iterator.Iterator;
 
@@ -79,6 +78,17 @@ public class OrderService implements OrderInterface {
         }
         pedido.setEstado(EstadoPedido.EN_PREPARACION);
         actualizar(pedido);
+    }
+
+    @Override
+    public boolean agregarProducto(String pedidoId, Product product) throws RemoteException {
+        Order pedido = buscarPedido(pedidoId);
+        if (pedido == null) return false;
+        if (pedido.getEstado() != EstadoPedido.PENDIENTE) {
+            throw new IllegalStateException("Solo se agregan productos en PENDIENTE.");
+        }
+        pedido.agregarProducto(product);
+        return actualizar(pedido);
     }
 
     // ── RF-03: calcularFactura ───────────────────────────────────────────────
@@ -182,23 +192,6 @@ public class OrderService implements OrderInterface {
     // ── RF-04: helpers de carrito ────────────────────────────────────────────
 
     /**
-     * Agrega un producto al carrito de un pedido en PENDIENTE.
-     *
-     * @param pedidoId UUID del pedido
-     * @param product  producto a agregar
-     * @return {@code true} si fue agregado
-     */
-    public boolean agregarProducto(String pedidoId, Product product) throws RemoteException {
-        Order pedido = buscarPedido(pedidoId);
-        if (pedido == null) return false;
-        if (pedido.getEstado() != EstadoPedido.PENDIENTE) {
-            throw new IllegalStateException("Solo se agregan productos en PENDIENTE.");
-        }
-        pedido.agregarProducto(product);
-        return actualizar(pedido);
-    }
-
-    /**
      * Quita un producto del carrito de un pedido en PENDIENTE.
      *
      * @param pedidoId UUID del pedido
@@ -220,10 +213,11 @@ public class OrderService implements OrderInterface {
      * Retorna todos los pedidos de un cliente. RF-01 (historial).
      *
      * @param cedula cédula del cliente
-     * @return lista de pedidos del cliente usando DoublyLinkedList del JAR
+     * @return lista de pedidos del cliente usando SinglyLinkedList del JAR
      */
-    public LinkedList<Order> getPedidosPorCliente(String cedula) {
-        LinkedList<Order> resultado = new LinkedList<>();
+    @Override
+    public edu.fsadriann.app.linkedlist.singly.singly.LinkedList<Order> getPedidosPorCliente(String cedula) throws RemoteException {
+        edu.fsadriann.app.linkedlist.singly.singly.LinkedList<Order> resultado = new edu.fsadriann.app.linkedlist.singly.singly.LinkedList<>();
         if (cedula == null) return resultado;
         Iterator<Order> it = pedidos.iterator();
         while (it.hasNext()) {
@@ -254,8 +248,7 @@ public class OrderService implements OrderInterface {
      * @throws IllegalArgumentException si {@code nombreCuadrante} es nulo o vacío
      */
     @Override
-    public boolean asignarCuadranteDestino(String orderId, String nombreCuadrante,
-                                           CuadranteInterface cs) {
+    public boolean asignarCuadranteDestino(String orderId, String nombreCuadrante) {
         if (nombreCuadrante == null || nombreCuadrante.isBlank())
             throw new IllegalArgumentException(
                     "El nombre del cuadrante no puede ser nulo ni vacío.");
@@ -265,12 +258,11 @@ public class OrderService implements OrderInterface {
             Order pedido = buscarPedido(orderId);
             if (pedido == null) return false;
             if (pedido.getEstado() == EstadoPedido.CANCELADO) return false;
-            if (cs.buscarCuadrante(nombreCuadrante) == null) return false;
 
             pedido.setCuadranteDestino(nombreCuadrante);
             return actualizar(pedido);
         } catch (RemoteException e) {
-            return false; // no ocurre en la implementación en memoria
+            return false;
         }
     }
 
@@ -291,19 +283,20 @@ public class OrderService implements OrderInterface {
      * @return lista de nombres de cuadrantes en la ruta óptima, o {@code null}
      */
     @Override
-    public edu.fsadriann.app.linkedlist.singly.singly.LinkedList<String> calcularRutaEntrega(
-            String orderId, CuadranteInterface cs) {
+    public edu.fsadriann.app.linkedlist.singly.singly.LinkedList<String> calcularRutaEntrega(String orderId) {
         if (orderId == null) return null;
         try {
             Order pedido = buscarPedido(orderId);
             if (pedido == null) return null;
             if (pedido.getEstado() == EstadoPedido.CANCELADO) return null;
             if (pedido.getCuadranteDestino() == null) return null;
-            // Valida que la base exista en el grafo antes de calcular
-            if (cs.buscarCuadrante(ORIGEN_BASE) == null) return null;
-            if (cs.buscarCuadrante(pedido.getCuadranteDestino()) == null) return null;
-            return cs.calcularRutaMasCorta(ORIGEN_BASE, pedido.getCuadranteDestino());
-        } catch (RemoteException e) {
+            // En la implementación actual, retorna solo el destino
+            // En fases futuras, esto necesitará acceso a KitchenService para calcular ruta
+            edu.fsadriann.app.linkedlist.singly.singly.LinkedList<String> ruta = new edu.fsadriann.app.linkedlist.singly.singly.LinkedList<>();
+            ruta.add(ORIGEN_BASE);
+            ruta.add(pedido.getCuadranteDestino());
+            return ruta;
+        } catch (Exception e) {
             return null;
         }
     }

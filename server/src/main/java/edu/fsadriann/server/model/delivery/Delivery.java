@@ -2,9 +2,12 @@ package edu.fsadriann.server.model.delivery;
 
 import edu.fsadriann.app.linkedlist.singly.singly.LinkedList;
 
+import java.io.Serializable;
 import java.util.UUID;
 
-public class Delivery {
+public class Delivery implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     /** Identificador único de la asignación (UUID). */
     private final String deliveryId;

@@ -2,7 +2,11 @@ package edu.fsadriann.server.model.user;
 
 import edu.fsadriann.app.linkedlist.singly.singly.LinkedList;
 import edu.fsadriann.server.model.product.Product;
-public class User {
+import java.io.Serializable;
+
+public class User implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     /** Identificador único del cliente (asignado externamente, ej. UUID). */
     private final String id;
@@ -15,6 +19,7 @@ public class User {
 
     /** Rol del cliente en el sistema. */
     private Rol rol;
+
 
     /** Cédula de ciudadanía — clave de búsqueda primaria. */
     private String cedula;

@@ -5,10 +5,11 @@ import edu.fsadriann.server.model.order.Order;
 import edu.fsadriann.server.model.user.User;
 import edu.fsadriann.app.linkedlist.singly.singly.LinkedList;
 
+import java.rmi.Remote;
 import java.rmi.RemoteException;
 
 
-public interface AdminInterface {
+public interface AdminInterface extends Remote {
     boolean crearOperador(User operador) throws RemoteException;
     boolean editarOperador(User operador) throws RemoteException;
     boolean eliminarOperador(String cedula) throws RemoteException;

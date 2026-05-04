@@ -1,6 +1,6 @@
 package edu.fsadriann;
 
-import edu.fsadriann.client.controller.ClientController;
+import edu.fsadriann.client.controller.auth.AuthClientController;
 import edu.fsadriann.client.factory.ClientFactory;
 
 /**
@@ -10,7 +10,7 @@ import edu.fsadriann.client.factory.ClientFactory;
 public class App {
     public static void main(String[] args) {
         try {
-            ClientController client = ClientFactory.create();
+            AuthClientController client = ClientFactory.create();
             client.init();
         } catch (Exception e) {
             e.printStackTrace();
