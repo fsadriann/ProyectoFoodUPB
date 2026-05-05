@@ -1,0 +1,12 @@
+[
+  { "nombre": "UPB",             "descripcion": "Universidad Pontificia Bolivariana — origen fijo", "latitud": 7.1393, "longitud": -73.1198, "disponible": true },
+  { "nombre": "Cabecera",        "descripcion": "Cabecera del Llano",       "latitud": 7.1270, "longitud": -73.1150, "disponible": true },
+  { "nombre": "Centro",          "descripcion": "Centro de Bucaramanga",    "latitud": 7.1254, "longitud": -73.1198, "disponible": true },
+  { "nombre": "Floridablanca",   "descripcion": "Municipio Floridablanca",  "latitud": 7.0644, "longitud": -73.0933, "disponible": true },
+  { "nombre": "Giron",           "descripcion": "Municipio Girón",          "latitud": 7.0742, "longitud": -73.1680, "disponible": true },
+  { "nombre": "Piedecuesta",     "descripcion": "Municipio Piedecuesta",    "latitud": 6.9869, "longitud": -73.0517, "disponible": true },
+  { "nombre": "Lagos",           "descripcion": "Lagos del Cacique",        "latitud": 7.1050, "longitud": -73.1100, "disponible": true },
+  { "nombre": "SanFrancisco",    "descripcion": "San Francisco",            "latitud": 7.1180, "longitud": -73.1250, "disponible": true },
+  { "nombre": "Provenza",        "descripcion": "Provenza",                 "latitud": 7.1320, "longitud": -73.1220, "disponible": true },
+  { "nombre": "Mejoras",         "descripcion": "Mejoras Públicas",         "latitud": 7.1150, "longitud": -73.1300, "disponible": true }
+]

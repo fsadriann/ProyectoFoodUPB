@@ -2,6 +2,7 @@ package edu.fsadriann.client.model;
 
 import edu.fsadriann.server.model.admin.AdminInterface;
 import edu.fsadriann.app.linkedlist.singly.singly.LinkedList;
+import edu.fsadriann.server.model.cuadrante.CuadranteInterface;
 import edu.fsadriann.server.model.order.KitchenInterface;
 import edu.fsadriann.server.model.order.OrderInterface;
 import edu.fsadriann.server.model.product.ProductInterface;
@@ -11,6 +12,7 @@ import edu.fsadriann.server.model.product.Product;
 import edu.fsadriann.server.model.user.Rol;
 import edu.fsadriann.server.model.user.UserInterface;
 import edu.fsadriann.server.model.user.User;
+import edu.fsadriann.server.model.cuadrante.Cuadrante;
 
 import java.rmi.Naming;
 
@@ -21,6 +23,8 @@ public class ClientModel extends Subject {
     private final String ordersUri;
     private final String kitchenUri;
     private final String adminUri;
+    private final String cuadrantesUri;
+
     private UserInterface userService;
     private ProductInterface productService;
     private OrderInterface orderService;
@@ -31,6 +35,8 @@ public class ClientModel extends Subject {
     private Rol currentRole;
     private User currentClient;
     private Order currentOrder;
+    private CuadranteInterface cuadranteService;
+
 
     public ClientModel(String ip, int port, String serviceName) {
         this.baseUri = "rmi://" + ip + ":" + port + "/" + serviceName;
@@ -39,11 +45,13 @@ public class ClientModel extends Subject {
         this.ordersUri = baseUri + "-orders";
         this.kitchenUri = baseUri + "-kitchen";
         this.adminUri = baseUri + "-admin";
+        this.cuadrantesUri  = baseUri + "-cuadrantes";
         this.connected = false;
     }
 
     public boolean connect() {
         try {
+            this.cuadranteService = (CuadranteInterface) Naming.lookup(cuadrantesUri);
             this.userService = (UserInterface) Naming.lookup(usersUri);
             this.productService = (ProductInterface) Naming.lookup(productsUri);
             this.orderService = (OrderInterface) Naming.lookup(ordersUri);
@@ -53,6 +61,7 @@ public class ClientModel extends Subject {
             updateLogger("Conectado al servidor en " + baseUri);
             return true;
         } catch (Exception e) {
+            this.cuadranteService = null;
             this.connected = false;
             this.userService = null;
             this.productService = null;
@@ -381,6 +390,72 @@ public class ClientModel extends Subject {
         }
     }
 
+    public boolean agregarCuadrante(Cuadrante cuadrante) {
+        if (!ensureConnected() || cuadrante == null) return false;
+        try {
+            boolean ok = cuadranteService.agregarCuadrante(cuadrante);
+            updateLogger(ok ? "Cuadrante agregado." : "No se pudo agregar el cuadrante.");
+            return ok;
+        } catch (Exception e) {
+            updateLogger("Error al agregar cuadrante: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean editarCuadrante(Cuadrante cuadrante) {
+        if (!ensureConnected() || cuadrante == null) return false;
+        try {
+            boolean ok = cuadranteService.editarCuadrante(cuadrante);
+            updateLogger(ok ? "Cuadrante editado." : "No se pudo editar el cuadrante.");
+            return ok;
+        } catch (Exception e) {
+            updateLogger("Error al editar cuadrante: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean conectarCuadrantes(String nombreA, String nombreB, double distancia) {
+        if (!ensureConnected()) return false;
+        try {
+            boolean ok = cuadranteService.conectarCuadrantes(nombreA, nombreB, distancia);
+            updateLogger(ok ? "Cuadrantes conectados." : "No se pudieron conectar.");
+            return ok;
+        } catch (Exception e) {
+            updateLogger("Error al conectar cuadrantes: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public LinkedList<Cuadrante> listarCuadrantes() {
+        if (!ensureConnected()) return new LinkedList<>();
+        try {
+            return cuadranteService.listarCuadrantes();
+        } catch (Exception e) {
+            updateLogger("Error al listar cuadrantes: " + e.getMessage());
+            return new LinkedList<>();
+        }
+    }
+
+    public LinkedList<String> verBitacora() {
+        if (!ensureConnected()) return new LinkedList<>();
+        try {
+            return adminService.verBitacoraAuditoria();
+        } catch (Exception e) {
+            updateLogger("Error al obtener bitácora: " + e.getMessage());
+            return new LinkedList<>();
+        }
+    }
+
+    public LinkedList<Order> getPedidosTodos() {
+        if (!ensureConnected()) return new LinkedList<>();
+        try {
+            return adminService.getPedidosTodos();
+        } catch (Exception e) {
+            updateLogger("Error al obtener pedidos: " + e.getMessage());
+            return new LinkedList<>();
+        }
+    }
+
     public boolean cancelarPedido() {
         return currentOrder != null && cancelarPedido(currentOrder.getOrderId());
     }
@@ -496,11 +571,65 @@ public class ClientModel extends Subject {
         this.notifyObservers();
     }
 
-    public boolean eliminarCliente(String cedula) {
-        return false;
+    public boolean actualizarCliente(User user) {
+        if (!ensureConnected() || user == null) return false;
+        try {
+            boolean ok = userService.actualizarCliente(user);
+            updateLogger(ok ? "Usuario actualizado." : "No se pudo actualizar el usuario.");
+            return ok;
+        } catch (Exception e) {
+            updateLogger("Error al actualizar usuario: " + e.getMessage());
+            return false;
+        }
     }
 
-    public boolean actualizarCliente(User updated) {
-        return true;
+    public boolean eliminarCliente(String cedula) {
+        if (!ensureConnected() || cedula == null) return false;
+        try {
+            boolean ok = userService.eliminarCliente(cedula);
+            updateLogger(ok ? "Usuario eliminado." : "No se pudo eliminar el usuario.");
+            return ok;
+        } catch (Exception e) {
+            updateLogger("Error al eliminar usuario: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean agregarProducto(Product product) {
+        if (!ensureConnected() || product == null) return false;
+        try {
+            boolean ok = productService.agregarProducto(product);
+            updateLogger(ok ? "Producto agregado." : "No se pudo agregar el producto.");
+            return ok;
+        } catch (Exception e) {
+            updateLogger("Error al agregar producto: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean editarProducto(Product product) {
+        if (!ensureConnected() || product == null) return false;
+        try {
+            boolean ok = productService.editarProducto(product);
+            updateLogger(ok ? "Producto editado." : "No se pudo editar el producto.");
+            return ok;
+        } catch (Exception e) {
+            updateLogger("Error al editar producto: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean toggleDisponibilidadProducto(String productoId, boolean disponible) {
+        if (!ensureConnected() || productoId == null) return false;
+        try {
+            boolean ok = disponible
+                    ? productService.activarProducto(productoId)
+                    : productService.desactivarProducto(productoId);
+            updateLogger(ok ? "Disponibilidad actualizada." : "No se pudo actualizar disponibilidad.");
+            return ok;
+        } catch (Exception e) {
+            updateLogger("Error al actualizar disponibilidad: " + e.getMessage());
+            return false;
+        }
     }
 }

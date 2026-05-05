@@ -55,6 +55,16 @@ public class ProductService implements ProductInterface {
     }
 
     @Override
+    public boolean activarProducto(String productoId) throws RemoteException {
+        if (productoId == null) return false;
+        Product p = buscarProducto(productoId);
+        if (p == null) return false;
+        p.setDisponible(true);
+        repository.save(p);
+        return true;
+    }
+
+    @Override
     public Product buscarProducto(String productoId) throws RemoteException {
         if (productoId == null) return null;
         Iterator<Product> it = catalogo.iterator();

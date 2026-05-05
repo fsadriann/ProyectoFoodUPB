@@ -11,6 +11,7 @@ import java.rmi.RemoteException;
 public class UserService implements UserInterface {
 
     private final LinkedList<User> clientes;
+    private final LinkedList<String> bitacora;
     private final LinkedList<SessionEntry> sesionesActivas;
     private final LinkedList<CredentialEntry> credenciales;
     private final OrderService orderService;
@@ -45,10 +46,10 @@ public class UserService implements UserInterface {
         this.sesionesActivas = new LinkedList<>();
         this.credenciales = new LinkedList<>();
         this.orderService = orderService;
+        this.bitacora = new LinkedList<>();
         cargarDatos();
     }
 
-    // Reemplaza seedDefaultData() — carga desde JSON
     private void cargarDatos() {
         for (User u : repository.findAllUsers()) {
             clientes.add(u);
@@ -58,6 +59,13 @@ public class UserService implements UserInterface {
         }
     }
 
+    private void registrar(String evento) {
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        String timestamp = now.format(
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        bitacora.add(timestamp + " | " + evento);
+    }
+
     @Override
     public Rol login(String correo, String contrasena) throws RemoteException {
         if (correo == null || contrasena == null) return null;
@@ -65,6 +73,7 @@ public class UserService implements UserInterface {
         if (usuario == null) return null;
         String passGuardada = getContrasena(usuario.getCedula());
         if (passGuardada == null || !passGuardada.equals(contrasena)) return null;
+        registrar("Login exitoso: " + correo + " | rol=" + usuario.getRol());
         return usuario.getRol();
     }
 
@@ -130,6 +139,7 @@ public class UserService implements UserInterface {
             setContrasena(user.getCedula(), user.getCedula());
             repository.saveCredential(user.getCedula(), user.getCedula()); // ← persiste
         }
+        registrar("Usuario registrado: " + user.getId() + " | rol=" + user.getRol());
         return user;
     }
 
@@ -154,7 +164,8 @@ public class UserService implements UserInterface {
         boolean removed = clientes.remove(u -> user.getCedula().equals(u.getCedula()));
         if (removed) {
             clientes.add(user);
-            repository.saveUser(user);              // ← persiste
+            repository.saveUser(user);
+            registrar("Usuario actualizado: " + user.getId());
         }
         return removed;
     }
@@ -171,8 +182,9 @@ public class UserService implements UserInterface {
         if (removed) {
             credenciales.remove(c -> c != null && cedula.equals(c.cedula));
             sesionesActivas.remove(s -> s != null && cedula.equals(s.cedula));
-            repository.deleteUser(cedula);          // ← persiste
-            repository.deleteCredential(cedula);    // ← persiste
+            repository.deleteUser(cedula);
+            repository.deleteCredential(cedula);
+            registrar("Usuario eliminado: cedula=" + cedula);
         }
         return removed;
     }
@@ -207,7 +219,7 @@ public class UserService implements UserInterface {
         if (buscarPorCedula(cedula) == null)
             throw new IllegalArgumentException("No existe cliente con cédula: " + cedula);
         setContrasena(cedula, contrasena);
-        repository.saveCredential(cedula, contrasena); // ← persiste
+        repository.saveCredential(cedula, contrasena);
     }
 
     private User buscarPorCedula(String cedula) {
@@ -218,6 +230,10 @@ public class UserService implements UserInterface {
             if (u != null && cedula.equals(u.getCedula())) return u;
         }
         return null;
+    }
+
+    public LinkedList<String> getBitacora() {
+        return bitacora;
     }
 
     private User buscarPorId(String correo) {

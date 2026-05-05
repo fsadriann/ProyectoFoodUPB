@@ -1,30 +1,37 @@
 package edu.fsadriann.server.model.admin;
 
 import edu.fsadriann.app.linkedlist.singly.singly.LinkedList;
+import edu.fsadriann.model.iterator.Iterator;
 import edu.fsadriann.server.model.order.Order;
+import edu.fsadriann.server.model.order.OrderService;
+import edu.fsadriann.server.model.product.ProductService;
 import edu.fsadriann.server.model.user.Rol;
 import edu.fsadriann.server.model.user.User;
-import edu.fsadriann.model.list.List;
+import edu.fsadriann.server.model.user.UserService;
 
 import java.rmi.RemoteException;
 
 public class AdminService implements AdminInterface {
 
     private final LinkedList<User>   operadores;
-    private final LinkedList<String> bitacora;
     private final LinkedList<Order>  pedidos;
+    private final LinkedList<String> bitacora;
+    private final UserService        userService;
+    private final ProductService     productService;
+    private final OrderService orderService;
 
 
     public AdminService() {
-        this.operadores = new LinkedList<>();
-        this.bitacora   = new LinkedList<>();
-        this.pedidos    = new LinkedList<>();
+        this(null, null, null);
     }
 
-    public AdminService(LinkedList<Order> pedidos) {
-        this.operadores = new LinkedList<>();
-        this.bitacora   = new LinkedList<>();
-        this.pedidos    = (pedidos != null) ? pedidos : new LinkedList<>();
+    public AdminService(UserService userService, ProductService productService, OrderService orderService) {
+        this.operadores     = new LinkedList<>();
+        this.bitacora       = new LinkedList<>();
+        this.pedidos        = new LinkedList<>();
+        this.userService    = userService;
+        this.productService = productService;
+        this.orderService   = orderService;
     }
 
     @Override
@@ -112,33 +119,57 @@ public class AdminService implements AdminInterface {
         registrar("Rol actualizado: " + cedula + " -> " + rol.name());
         return true;
     }
+
     @Override
     public LinkedList<Order> generarReporte(String filtroFecha,
-                                      String filtroEstado,
-                                      String filtroCuadrante) throws RemoteException {
+                                            String filtroEstado,
+                                            String filtroCuadrante) throws RemoteException {
         LinkedList<Order> resultado = new LinkedList<>();
-
         for (Order o : pedidos.toArray()) {
             if (o == null) continue;
-
             if (filtroEstado != null && !filtroEstado.isBlank()) {
                 if (o.getEstado() == null ||
                         !filtroEstado.equalsIgnoreCase(o.getEstado().name())) continue;
             }
-
             if (filtroCuadrante != null && !filtroCuadrante.isBlank()) {
                 if (o.getCuadranteDestino() == null ||
                         !filtroCuadrante.equalsIgnoreCase(o.getCuadranteDestino())) continue;
             }
-
             resultado.add(o);
         }
-
         return resultado;
     }
+
+    public LinkedList<String> getBitacora() {
+        return bitacora;
+    }
+
     @Override
     public LinkedList<String> verBitacoraAuditoria() throws RemoteException {
-        return bitacora;
+        LinkedList<String> todas = new LinkedList<>();
+        Iterator<String> it1 = bitacora.iterator();
+        while (it1.hasNext()) {
+            String e = it1.next();
+            if (e != null) todas.add(e);
+        }
+        if (userService != null) {
+            Iterator<String> it2 = userService.getBitacora().iterator();
+            while (it2.hasNext()) {
+                String e = it2.next();
+                if (e != null) todas.add(e);
+            }
+        }
+        return todas;
+    }
+
+    @Override
+    public LinkedList<Order> getPedidosTodos() throws RemoteException {
+        if (orderService == null) return new LinkedList<>();
+        try {
+            return orderService.listarTodosLosPedidos();
+        } catch (Exception e) {
+            return new LinkedList<>();
+        }
     }
 
     private User buscarPorCedula(String cedula) {
@@ -150,6 +181,9 @@ public class AdminService implements AdminInterface {
     }
 
     private void registrar(String evento) {
-        bitacora.add("[" + System.currentTimeMillis() + "] " + evento);
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        String timestamp = now.format(
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        bitacora.add(timestamp + " | " + evento);
     }
 }

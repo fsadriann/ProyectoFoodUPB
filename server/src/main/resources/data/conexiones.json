@@ -1,0 +1,14 @@
+[
+  { "origen": "UPB",          "destino": "Cabecera",      "distancia": 1.8 },
+  { "origen": "UPB",          "destino": "Provenza",      "distancia": 1.2 },
+  { "origen": "UPB",          "destino": "SanFrancisco",  "distancia": 1.5 },
+  { "origen": "Cabecera",     "destino": "Lagos",         "distancia": 2.1 },
+  { "origen": "Cabecera",     "destino": "Centro",        "distancia": 2.5 },
+  { "origen": "Provenza",     "destino": "SanFrancisco",  "distancia": 0.9 },
+  { "origen": "SanFrancisco", "destino": "Mejoras",       "distancia": 1.3 },
+  { "origen": "Centro",       "destino": "Mejoras",       "distancia": 1.0 },
+  { "origen": "Centro",       "destino": "Giron",         "distancia": 8.5 },
+  { "origen": "Lagos",        "destino": "Floridablanca", "distancia": 5.2 },
+  { "origen": "Floridablanca","destino": "Piedecuesta",   "distancia": 9.0 },
+  { "origen": "Mejoras",      "destino": "Giron",         "distancia": 7.8 }
+]

@@ -7,6 +7,8 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 
 import edu.fsadriann.server.model.admin.AdminService;
+import edu.fsadriann.server.model.cuadrante.CuadranteService;
+import edu.fsadriann.server.model.delivery.DeliveryService;
 import edu.fsadriann.server.model.order.KitchenService;
 import edu.fsadriann.server.model.order.OrderService;
 import edu.fsadriann.server.model.product.ProductService;
@@ -22,6 +24,8 @@ public class ServerModel {
     private boolean createdRegistry = false;
     private boolean running = false;
 
+    private CuadranteService cuadranteService;
+    private DeliveryService deliveryService;
     private UserService userService;
     private ProductService productService;
     private OrderService orderService;
@@ -39,13 +43,14 @@ public class ServerModel {
         try {
             System.setProperty("java.rmi.server.hostname", ip);
 
+            cuadranteService = new CuadranteService();
+            deliveryService  = new DeliveryService(cuadranteService);
             orderService = new OrderService();
             userService = new UserService(orderService);
             productService = new ProductService();
             kitchenService = new KitchenService(orderService);
-            adminService = new AdminService();
+            adminService = new AdminService(userService, productService, orderService);
 
-            // Intentar reusar un Registry existente antes de crear uno nuevo.
             try {
                 registry = LocateRegistry.getRegistry(port);
                 // Intentar listar para comprobar conexión
@@ -59,7 +64,7 @@ public class ServerModel {
                 System.out.println("Servidor RMI iniciado correctamente en " + ip + ":" + port);
             }
 
-            // Bind/replace services (rebind para evitar problemas si ya existían nombres)
+            bindService("-cuadrantes", cuadranteService);
             bindService("-users", userService);
             bindService("-products", productService);
             bindService("-orders", orderService);
@@ -76,12 +81,14 @@ public class ServerModel {
 
     public boolean stop() {
         try {
+            Naming.unbind(uri + "-cuadrantes");
             Naming.unbind(uri + "-users");
             Naming.unbind(uri + "-products");
             Naming.unbind(uri + "-orders");
             Naming.unbind(uri + "-kitchen");
             Naming.unbind(uri + "-admin");
 
+            if (cuadranteService != null) UnicastRemoteObject.unexportObject(cuadranteService, true);
             if (userService != null) UnicastRemoteObject.unexportObject(userService, true);
             if (productService != null) UnicastRemoteObject.unexportObject(productService, true);
             if (orderService != null) UnicastRemoteObject.unexportObject(orderService, true);

@@ -11,6 +11,7 @@ import java.util.function.Consumer;
 import edu.fsadriann.app.linkedlist.singly.singly.LinkedList;
 import edu.fsadriann.model.iterator.Iterator;
 import edu.fsadriann.server.model.user.User;
+import edu.fsadriann.server.model.cuadrante.Cuadrante;
 
 public class AdminView extends JFrame {
 
@@ -30,6 +31,10 @@ public class AdminView extends JFrame {
     private static final String SEC_CUADS    = "cuadrants";
     private static final String SEC_AUDIT    = "audit";
 
+    private DefaultTableModel auditTableModel;
+    private JPanel cuadsGrid;
+    private JButton addCuadBtn;
+    private JButton connectCuadBtn;
     private final JFrame frame;
     private JLabel totalUsersValue;
     private JLabel statusLabel;
@@ -42,6 +47,12 @@ public class AdminView extends JFrame {
     private final CardLayout sectionLayout = new CardLayout();
     private JPanel sectionCards;
     private final Map<String, JButton> sectionTabs = new LinkedHashMap<>();
+    private DefaultTableModel productsTableModel;
+    private JTable productsTable;
+    private JButton addProductBtn;
+    private JButton editProductBtn;
+    private JButton toggleProductBtn;
+
 
     public AdminView(String userLabel) {
         super("Food UPB — Administrador");
@@ -248,53 +259,203 @@ public class AdminView extends JFrame {
         return card;
     }
 
+    // ── reemplaza buildProductsSection()
     private JPanel buildProductsSection() {
         JPanel card = card();
         card.setLayout(new BorderLayout(0, 12));
         card.setBorder(new EmptyBorder(16, 18, 16, 18));
+
+        // Header
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
         JLabel t = new JLabel("Catálogo de productos");
         t.setFont(new Font("SansSerif", Font.BOLD, 16));
         t.setForeground(TEXT);
-        String[] cols = {"Nombre", "Precio", "Preparación", "Tipo", "Estado"};
-        DefaultTableModel pm = new DefaultTableModel(cols, 0) {
+        addProductBtn = new JButton("+ Nuevo producto");
+        styleBtn(addProductBtn, BLUE, Color.WHITE);
+        header.add(t,             BorderLayout.WEST);
+        header.add(addProductBtn, BorderLayout.EAST);
+
+        // Tabla
+        String[] cols = {"ID", "Nombre", "Categoría", "Precio", "Complejo", "Disponible"};
+        productsTableModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
-        JScrollPane ps = new JScrollPane(styledTable(pm));
+        productsTable = styledTable(productsTableModel);
+        productsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        JScrollPane ps = new JScrollPane(productsTable);
         ps.setBorder(new MatteBorder(1, 0, 0, 0, BORDER_C));
-        card.add(t,  BorderLayout.NORTH);
-        card.add(ps, BorderLayout.CENTER);
+
+        // Botones editar / disponibilidad
+        editProductBtn   = new JButton("Editar");
+        toggleProductBtn = new JButton("Activar / Desactivar");
+        styleBtn(editProductBtn,   new Color(40, 167, 69), Color.WHITE);
+        styleBtn(toggleProductBtn, new Color(255, 153, 0), Color.WHITE);
+        editProductBtn.setEnabled(false);
+        toggleProductBtn.setEnabled(false);
+
+        productsTable.getSelectionModel().addListSelectionListener(e -> {
+            boolean selected = productsTable.getSelectedRow() >= 0;
+            editProductBtn.setEnabled(selected);
+            toggleProductBtn.setEnabled(selected);
+        });
+
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        actions.setOpaque(false);
+        actions.add(editProductBtn);
+        actions.add(toggleProductBtn);
+
+        card.add(header,  BorderLayout.NORTH);
+        card.add(ps,      BorderLayout.CENTER);
+        card.add(actions, BorderLayout.SOUTH);
         return card;
     }
 
+    public void setProducts(LinkedList<edu.fsadriann.server.model.product.Product> products) {
+        SwingUtilities.invokeLater(() -> {
+            productsTableModel.setRowCount(0);
+            if (products == null) return;
+            edu.fsadriann.model.iterator.Iterator<edu.fsadriann.server.model.product.Product> it = products.iterator();
+            while (it.hasNext()) {
+                edu.fsadriann.server.model.product.Product p = it.next();
+                if (p == null) continue;
+                productsTableModel.addRow(new Object[]{
+                        p.getProductoId(),
+                        p.getNombre(),
+                        p.getCategoria(),
+                        "$" + p.getPrecio(),
+                        p.isComplejo() ? "Sí" : "No",
+                        p.isDisponible() ? "Sí" : "No"
+                });
+            }
+        });
+    }
+
+    public void addOpenProductFormListener(Runnable action) {
+        addProductBtn.addActionListener(e -> action.run());
+    }
+
+    public void addEditProductListener(Runnable action) {
+        editProductBtn.addActionListener(e -> action.run());
+    }
+
+    public void addToggleProductListener(Runnable action) {
+        toggleProductBtn.addActionListener(e -> action.run());
+    }
+
+    public String getSelectedProductId() {
+        int row = productsTable.getSelectedRow();
+        if (row < 0) return null;
+        return (String) productsTableModel.getValueAt(row, 0); // columna ID
+    }
+
+    public boolean getSelectedProductDisponible() {
+        int row = productsTable.getSelectedRow();
+        if (row < 0) return false;
+        return "Sí".equals(productsTableModel.getValueAt(row, 5)); // columna Disponible
+    }
+
+    public void showProductForm(String[] prefill,
+                                java.util.function.Consumer<String[]> onSave) {
+        JDialog dialog = new JDialog(frame,
+                prefill == null ? "Nuevo producto" : "Editar producto", true);
+        dialog.setSize(480, 400);
+        dialog.setLocationRelativeTo(frame);
+
+        JPanel root = new JPanel(new BorderLayout());
+        root.setBackground(BG2);
+        root.setBorder(new EmptyBorder(16, 16, 16, 16));
+
+        JPanel form = new JPanel(new GridLayout(0, 2, 12, 10));
+        form.setOpaque(false);
+
+        JTextField nombre      = field(prefill != null ? prefill[0] : "Nombre");
+        JTextField descripcion = field(prefill != null ? prefill[1] : "Descripción");
+        JTextField precio      = field(prefill != null ? prefill[2] : "Precio");
+        JComboBox<String> categoria = new JComboBox<>(
+                new String[]{"PLATO_PRINCIPAL", "BEBIDA", "ENTRADA", "POSTRE"});
+        if (prefill != null && prefill[3] != null) categoria.setSelectedItem(prefill[3]);
+        JComboBox<String> complejo = new JComboBox<>(new String[]{"No", "Sí"});
+        if (prefill != null && prefill[4] != null) complejo.setSelectedItem(prefill[4]);
+
+        form.add(labeled("Nombre",      nombre));
+        form.add(labeled("Descripción", descripcion));
+        form.add(labeled("Precio",      precio));
+        form.add(labeled("Categoría",   categoria));
+        form.add(labeled("¿Complejo?",  complejo));
+
+        JPanel bottom = new JPanel(new BorderLayout());
+        bottom.setOpaque(false);
+        bottom.setBorder(new EmptyBorder(10, 0, 0, 0));
+        JLabel error = new JLabel(" ");
+        error.setForeground(DANGER);
+        error.setFont(new Font("SansSerif", Font.PLAIN, 12));
+
+        JButton save = new JButton("Guardar");
+        styleBtn(save, BLUE, Color.WHITE);
+        save.addActionListener(e -> {
+            String n = nombre.getText().trim();
+            String d = descripcion.getText().trim();
+            String pr = precio.getText().trim();
+            if (n.isBlank() || pr.isBlank()) {
+                error.setText("Nombre y precio son obligatorios.");
+                return;
+            }
+            try { Integer.parseInt(pr); }
+            catch (NumberFormatException ex) {
+                error.setText("El precio debe ser un número entero.");
+                return;
+            }
+            onSave.accept(new String[]{
+                    n, d, pr,
+                    String.valueOf(categoria.getSelectedItem()),
+                    String.valueOf(complejo.getSelectedItem())
+            });
+            dialog.dispose();
+        });
+
+        bottom.add(error, BorderLayout.CENTER);
+        bottom.add(save,  BorderLayout.EAST);
+        root.add(form,   BorderLayout.CENTER);
+        root.add(bottom, BorderLayout.SOUTH);
+        dialog.setContentPane(root);
+        dialog.setVisible(true);
+    }
+
+    // ── reemplaza buildCuadsSection()
     private JPanel buildCuadsSection() {
         JPanel card = card();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setLayout(new BorderLayout(0, 12));
         card.setBorder(new EmptyBorder(16, 18, 16, 18));
+
+        // Header
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
         JLabel t = new JLabel("Cuadrantes de entrega");
         t.setFont(new Font("SansSerif", Font.BOLD, 16));
         t.setForeground(TEXT);
-        t.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.add(t);
-        card.add(Box.createVerticalStrut(14));
-        JPanel grid = new JPanel(new GridLayout(2, 3, 10, 10));
-        grid.setOpaque(false);
-        grid.setAlignmentX(Component.LEFT_ALIGNMENT);
-        String[][] cuads = {
-                {"A", "Centro · Cabecera",   "$2.500"},
-                {"B", "Laureles · Cabecera", "$3.500"},
-                {"C", "Floridablanca",       "$5.000"},
-                {"D", "Girón",               "$6.500"},
-                {"E", "Piedecuesta",         "$8.000"},
-        };
-        for (String[] c : cuads) grid.add(buildCuadCell(c[0], c[1], c[2]));
-        JPanel ph = card();
-        ph.setLayout(new BorderLayout());
-        JLabel phLbl = new JLabel("+ Agregar cuadrante", SwingConstants.CENTER);
-        phLbl.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        phLbl.setForeground(TEXT3);
-        ph.add(phLbl, BorderLayout.CENTER);
-        grid.add(ph);
-        card.add(grid);
+
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        btnPanel.setOpaque(false);
+        addCuadBtn     = new JButton("+ Nuevo cuadrante");
+        connectCuadBtn = new JButton("Conectar cuadrantes");
+        styleBtn(addCuadBtn,     BLUE,                    Color.WHITE);
+        styleBtn(connectCuadBtn, new Color(100, 100, 100), Color.WHITE);
+        btnPanel.add(connectCuadBtn);
+        btnPanel.add(addCuadBtn);
+
+        header.add(t,        BorderLayout.WEST);
+        header.add(btnPanel, BorderLayout.EAST);
+
+        // Grid de cuadrantes
+        cuadsGrid = new JPanel(new WrapLayout(FlowLayout.LEFT, 10, 10));
+        cuadsGrid.setOpaque(false);
+        JScrollPane scroll = new JScrollPane(cuadsGrid);
+        scroll.setBorder(new MatteBorder(1, 0, 0, 0, BORDER_C));
+        scroll.getViewport().setOpaque(false);
+
+        card.add(header, BorderLayout.NORTH);
+        card.add(scroll, BorderLayout.CENTER);
         return card;
     }
 
@@ -324,17 +485,32 @@ public class AdminView extends JFrame {
         JPanel card = card();
         card.setLayout(new BorderLayout(0, 12));
         card.setBorder(new EmptyBorder(16, 18, 16, 18));
+
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
         JLabel t = new JLabel("Bitácora de auditoría");
         t.setFont(new Font("SansSerif", Font.BOLD, 16));
         t.setForeground(TEXT);
-        String[] cols = {"Fecha / hora", "Usuario", "Acción", "Detalle"};
-        DefaultTableModel am = new DefaultTableModel(cols, 0) {
+
+        JButton refreshBtn = new JButton("↻ Actualizar");
+        styleBtn(refreshBtn, new Color(100, 100, 100), Color.WHITE);
+        header.add(t,          BorderLayout.WEST);
+        header.add(refreshBtn, BorderLayout.EAST);
+
+        String[] cols = {"Fecha / hora", "Evento"};
+        auditTableModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
-        JScrollPane as = new JScrollPane(styledTable(am));
+        JTable table = styledTable(auditTableModel);
+        table.getColumnModel().getColumn(0).setPreferredWidth(150);
+        table.getColumnModel().getColumn(0).setMaxWidth(180);
+        JScrollPane as = new JScrollPane(table);
         as.setBorder(new MatteBorder(1, 0, 0, 0, BORDER_C));
-        card.add(t,  BorderLayout.NORTH);
-        card.add(as, BorderLayout.CENTER);
+
+        refreshBtn.setName("refreshAudit");
+
+        card.add(header, BorderLayout.NORTH);
+        card.add(as,     BorderLayout.CENTER);
         return card;
     }
 
@@ -441,6 +617,196 @@ public class AdminView extends JFrame {
     }
 
     // ── Public API ────────────────────────────────────────────────────────────
+
+    public void addOpenCuadFormListener(Runnable action) {
+        addCuadBtn.addActionListener(e -> action.run());
+    }
+
+    public void addConnectCuadListener(Runnable action) {
+        connectCuadBtn.addActionListener(e -> action.run());
+    }
+
+    public void addRefreshAuditListener(Runnable action) {
+        findRefreshAuditBtn(sectionCards, action);
+    }
+
+    private void findRefreshAuditBtn(java.awt.Container container, Runnable action) {
+        for (java.awt.Component c : container.getComponents()) {
+            if (c instanceof JButton && "refreshAudit".equals(c.getName())) {
+                ((JButton) c).addActionListener(e -> action.run());
+                return;
+            }
+            if (c instanceof java.awt.Container) {
+                findRefreshAuditBtn((java.awt.Container) c, action);
+            }
+        }
+    }
+
+    public void setBitacora(LinkedList<String> eventos) {
+        SwingUtilities.invokeLater(() -> {
+            auditTableModel.setRowCount(0);
+            if (eventos == null) return;
+            edu.fsadriann.model.iterator.Iterator<String> it = eventos.iterator();
+            while (it.hasNext()) {
+                String e = it.next();
+                if (e == null) continue;
+                String[] parts = e.split(" \\| ", 2);
+                if (parts.length == 2) {
+                    auditTableModel.addRow(new Object[]{ parts[0], parts[1] });
+                } else {
+                    auditTableModel.addRow(new Object[]{ "—", e });
+                }
+            }
+        });
+    }
+
+    public void setCuadrantes(LinkedList<Cuadrante> cuadrantes) {
+        SwingUtilities.invokeLater(() -> {
+            cuadsGrid.removeAll();
+            if (cuadrantes == null) { cuadsGrid.revalidate(); cuadsGrid.repaint(); return; }
+            edu.fsadriann.model.iterator.Iterator<Cuadrante> it = cuadrantes.iterator();
+            while (it.hasNext()) {
+                Cuadrante c = it.next();
+                if (c != null) cuadsGrid.add(buildCuadCell(c));
+            }
+            cuadsGrid.revalidate();
+            cuadsGrid.repaint();
+        });
+    }
+
+    private JPanel buildCuadCell(Cuadrante c) {
+        boolean esOrigen = "UPB".equals(c.getNombre());
+        JPanel p = card();
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+        p.setPreferredSize(new Dimension(180, 90));
+        p.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(esOrigen ? BLUE : (c.isDisponible() ? BORDER_C : DANGER)),
+                new EmptyBorder(10, 12, 10, 12)));
+
+        JLabel nombre = new JLabel(c.getNombre());
+        nombre.setFont(new Font("SansSerif", Font.BOLD, 13));
+        nombre.setForeground(esOrigen ? BLUE : TEXT);
+
+        JLabel desc = new JLabel(c.getDescripcion() != null ? c.getDescripcion() : "—");
+        desc.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        desc.setForeground(TEXT3);
+
+        JLabel estado = new JLabel(esOrigen ? "Origen fijo" :
+                (c.isDisponible() ? "Disponible" : "No disponible"));
+        estado.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        estado.setForeground(esOrigen ? BLUE :
+                (c.isDisponible() ? new Color(40, 167, 69) : DANGER));
+
+        p.add(nombre);
+        p.add(Box.createVerticalStrut(2));
+        p.add(desc);
+        p.add(Box.createVerticalStrut(4));
+        p.add(estado);
+        return p;
+    }
+
+    public void showCuadForm(String[] prefill, java.util.function.Consumer<String[]> onSave) {
+        JDialog dialog = new JDialog(frame,
+                prefill == null ? "Nuevo cuadrante" : "Editar cuadrante", true);
+        dialog.setSize(400, 300);
+        dialog.setLocationRelativeTo(frame);
+
+        JPanel root = new JPanel(new BorderLayout());
+        root.setBackground(BG2);
+        root.setBorder(new EmptyBorder(16, 16, 16, 16));
+
+        JPanel form = new JPanel(new GridLayout(0, 2, 12, 10));
+        form.setOpaque(false);
+
+        JTextField nombre      = field(prefill != null ? prefill[0] : "Nombre");
+        JTextField descripcion = field(prefill != null ? prefill[1] : "Descripción");
+        JTextField latitud     = field(prefill != null ? prefill[2] : "Latitud (opcional)");
+        JTextField longitud    = field(prefill != null ? prefill[3] : "Longitud (opcional)");
+
+        form.add(labeled("Nombre",      nombre));
+        form.add(labeled("Descripción", descripcion));
+        form.add(labeled("Latitud",     latitud));
+        form.add(labeled("Longitud",    longitud));
+
+        JPanel bottom = new JPanel(new BorderLayout());
+        bottom.setOpaque(false);
+        bottom.setBorder(new EmptyBorder(10, 0, 0, 0));
+        JLabel error = new JLabel(" ");
+        error.setForeground(DANGER);
+        error.setFont(new Font("SansSerif", Font.PLAIN, 12));
+
+        JButton save = new JButton("Guardar");
+        styleBtn(save, BLUE, Color.WHITE);
+        save.addActionListener(e -> {
+            String n = nombre.getText().trim();
+            String d = descripcion.getText().trim();
+            if (n.isBlank()) { error.setText("El nombre es obligatorio."); return; }
+            onSave.accept(new String[]{ n, d,
+                    latitud.getText().trim(), longitud.getText().trim() });
+            dialog.dispose();
+        });
+
+        bottom.add(error, BorderLayout.CENTER);
+        bottom.add(save,  BorderLayout.EAST);
+        root.add(form,   BorderLayout.CENTER);
+        root.add(bottom, BorderLayout.SOUTH);
+        dialog.setContentPane(root);
+        dialog.setVisible(true);
+    }
+
+    public void showConnectCuadForm(java.util.function.Consumer<String[]> onConnect) {
+        JDialog dialog = new JDialog(frame, "Conectar cuadrantes", true);
+        dialog.setSize(400, 220);
+        dialog.setLocationRelativeTo(frame);
+
+        JPanel root = new JPanel(new BorderLayout());
+        root.setBackground(BG2);
+        root.setBorder(new EmptyBorder(16, 16, 16, 16));
+
+        JPanel form = new JPanel(new GridLayout(0, 2, 12, 10));
+        form.setOpaque(false);
+
+        JTextField cuadA     = field("Nombre cuadrante A");
+        JTextField cuadB     = field("Nombre cuadrante B");
+        JTextField distancia = field("Distancia (km)");
+
+        form.add(labeled("Cuadrante A",    cuadA));
+        form.add(labeled("Cuadrante B",    cuadB));
+        form.add(labeled("Distancia (km)", distancia));
+
+        JPanel bottom = new JPanel(new BorderLayout());
+        bottom.setOpaque(false);
+        bottom.setBorder(new EmptyBorder(10, 0, 0, 0));
+        JLabel error = new JLabel(" ");
+        error.setForeground(DANGER);
+        error.setFont(new Font("SansSerif", Font.PLAIN, 12));
+
+        JButton save = new JButton("Conectar");
+        styleBtn(save, BLUE, Color.WHITE);
+        save.addActionListener(e -> {
+            String a = cuadA.getText().trim();
+            String b = cuadB.getText().trim();
+            String d = distancia.getText().trim();
+            if (a.isBlank() || b.isBlank() || d.isBlank()) {
+                error.setText("Todos los campos son obligatorios.");
+                return;
+            }
+            try { Double.parseDouble(d); }
+            catch (NumberFormatException ex) {
+                error.setText("La distancia debe ser un número.");
+                return;
+            }
+            onConnect.accept(new String[]{ a, b, d });
+            dialog.dispose();
+        });
+
+        bottom.add(error, BorderLayout.CENTER);
+        bottom.add(save,  BorderLayout.EAST);
+        root.add(form,   BorderLayout.CENTER);
+        root.add(bottom, BorderLayout.SOUTH);
+        dialog.setContentPane(root);
+        dialog.setVisible(true);
+    }
 
     public void addLogoutListener(Runnable action) {
         logoutBtn.addActionListener(e -> action.run());
@@ -611,4 +977,36 @@ public class AdminView extends JFrame {
     public void showView() { setVisible(true); toFront(); }
     public void hideView() { setVisible(false); }
     public JFrame getFrame() { return frame; }
+
+    private static class WrapLayout extends FlowLayout {
+        public WrapLayout(int align, int hgap, int vgap) { super(align, hgap, vgap); }
+        @Override
+        public Dimension preferredLayoutSize(Container target) {
+            return layoutSize(target, true);
+        }
+        @Override
+        public Dimension minimumLayoutSize(Container target) {
+            return layoutSize(target, false);
+        }
+        private Dimension layoutSize(Container target, boolean preferred) {
+            synchronized (target.getTreeLock()) {
+                int width = target.getWidth();
+                if (width == 0) width = Integer.MAX_VALUE;
+                int x = getHgap(), y = getVgap(), rowH = 0, start = x;
+                Insets insets = target.getInsets();
+                width -= insets.left + insets.right + getHgap() * 2;
+                for (Component c : target.getComponents()) {
+                    if (!c.isVisible()) continue;
+                    Dimension d = preferred ? c.getPreferredSize() : c.getMinimumSize();
+                    if (x + d.width > width && x != start) {
+                        y += rowH + getVgap(); rowH = 0; x = start;
+                    }
+                    x += d.width + getHgap();
+                    rowH = Math.max(rowH, d.height);
+                }
+                y += rowH + getVgap() + insets.top + insets.bottom;
+                return new Dimension(width, y);
+            }
+        }
+    }
 }

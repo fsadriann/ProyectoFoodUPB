@@ -12,26 +12,34 @@ import java.rmi.RemoteException;
 public class DeliveryService implements DeliveryInterface {
 
     private final LinkedList<Delivery> entregas;
+    private final CuadranteInterface cuadranteService;
 
-    public DeliveryService() {
-        this.entregas = new LinkedList<>();
+    public DeliveryService(CuadranteInterface cuadranteService) {
+        this.entregas          = new LinkedList<>();
+        this.cuadranteService  = cuadranteService;
     }
 
     @Override
     public Delivery asignarPedidoARepartidor(String orderId, String repartidorId, OrderService os) {
-        // Validar entradas básicas
         if (orderId == null) return null;
         if (repartidorId == null || repartidorId.isBlank())
             throw new IllegalArgumentException("El repartidorId no puede ser nulo ni vacío.");
-
         if (yaEstaAsignado(orderId)) return null;
+
         try {
             Order pedido = os.buscarPedido(orderId);
             if (pedido == null) return null;
             if (pedido.getEstado() != EstadoPedido.LISTO) return null;
             if (pedido.getCuadranteDestino() == null) return null;
 
-            LinkedList<String> ruta = os.calcularRutaEntrega(orderId);
+            // Usar Dijkstra del CuadranteService
+            LinkedList<String> ruta = cuadranteService.calcularRutaMasCorta(
+                    "UPB", pedido.getCuadranteDestino());
+
+            // Si no hay ruta con Dijkstra, fallback a ruta simple
+            if (ruta == null) {
+                ruta = os.calcularRutaEntrega(orderId);
+            }
             if (ruta == null) return null;
 
             Delivery delivery = new Delivery(orderId, repartidorId, ruta);

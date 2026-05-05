@@ -16,4 +16,5 @@ public interface AdminInterface extends Remote {
     boolean asignarRol(String cedula, Rol rol) throws RemoteException;
     LinkedList<Order> generarReporte(String filtroFecha, String filtroEstado, String filtroCuadrante) throws RemoteException;
     LinkedList<String> verBitacoraAuditoria() throws RemoteException;
+    LinkedList<Order> getPedidosTodos() throws RemoteException;
 }

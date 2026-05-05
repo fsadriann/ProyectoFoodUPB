@@ -6,38 +6,12 @@ public class Cuadrante implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    /** Identificador único. Es la clave del grafo — debe ser irrepetible. */
     private String nombre;
-
-    /** Descripción del barrio o zona para mostrar al usuario. */
     private String descripcion;
-
-    /**
-     * Coordenada geográfica latitud.
-     * Valor 0.0 si no se ha configurado; se usa en visualización Swing posterior.
-     */
     private double latitud;
-
-    /**
-     * Coordenada geográfica longitud.
-     * Valor 0.0 si no se ha configurado; se usa en visualización Swing posterior.
-     */
     private double longitud;
-
-    /**
-     * Indica si el cuadrante está activo para recibir entregas.
-     * {@code true} por defecto. Permite deshabilitar zonas sin eliminarlas del grafo.
-     */
     private boolean disponible;
 
-    // ── Constructores ─────────────────────────────────────────────────────────
-
-    /**
-     * Constructor mínimo. Coordenadas en 0.0, disponible = true.
-     *
-     * @param nombre      identificador único (no puede ser nulo ni vacío)
-     * @param descripcion descripción de la zona
-     */
     public Cuadrante(String nombre, String descripcion) {
         if (nombre == null || nombre.isBlank())
             throw new IllegalArgumentException("El nombre del cuadrante no puede ser nulo ni vacío.");
@@ -46,14 +20,6 @@ public class Cuadrante implements Serializable {
         this.disponible  = true;
     }
 
-    /**
-     * Constructor completo con coordenadas para visualización futura.
-     *
-     * @param nombre      identificador único
-     * @param descripcion descripción de la zona
-     * @param latitud     coordenada latitud
-     * @param longitud    coordenada longitud
-     */
     public Cuadrante(String nombre, String descripcion, double latitud, double longitud) {
         this(nombre, descripcion);
         this.latitud  = latitud;

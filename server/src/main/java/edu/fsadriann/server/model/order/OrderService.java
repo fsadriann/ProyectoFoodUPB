@@ -1,6 +1,6 @@
 package edu.fsadriann.server.model.order;
 
-import edu.fsadriann.app.linkedlist.doubly.doubly.LinkedList;
+import edu.fsadriann.app.linkedlist.singly.singly.LinkedList;
 import edu.fsadriann.server.model.product.Product;
 import edu.fsadriann.model.iterator.Iterator;
 
@@ -258,6 +258,13 @@ public class OrderService implements OrderInterface {
         return resultado;
     }
 
+    @Override
+    public LinkedList<Order> listarTodosPedidos() throws RemoteException {
+        return pedidos;
+    }
+    public LinkedList<Order> listarTodosLosPedidos() {
+        return pedidos;
+    }
     // ── Helper privado ─────────────────────────────────────────────────────────────
 
     private boolean actualizar(Order order) {
@@ -265,4 +272,6 @@ public class OrderService implements OrderInterface {
         if (removed) pedidos.add(order);
         return removed;
     }
+
+
 }
