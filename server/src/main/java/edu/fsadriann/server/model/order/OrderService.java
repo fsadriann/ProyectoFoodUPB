@@ -29,19 +29,27 @@ public class OrderService implements OrderInterface {
         return order;
     }
 
+    // ── FIX: buscar el pedido en el servidor por ID, no usar el objeto
+    //         deserializado del cliente (que llega sin productos en el carrito).
     @Override
     public void enviarPedidoACocina(Order pedido) throws RemoteException {
         if (pedido == null) throw new IllegalArgumentException("Pedido nulo.");
-        if (pedido.getEstado() != EstadoPedido.PENDIENTE) {
+
+        // Usamos la copia que vive en el servidor, donde los productos SÍ están
+        Order serverPedido = buscarPedido(pedido.getOrderId());
+        if (serverPedido == null)
+            throw new IllegalArgumentException("Pedido no encontrado en servidor: " + pedido.getOrderId());
+
+        if (serverPedido.getEstado() != EstadoPedido.PENDIENTE) {
             throw new IllegalStateException(
-                "El pedido debe estar PENDIENTE. Estado actual: " + pedido.getEstado());
+                    "El pedido debe estar PENDIENTE. Estado actual: " + serverPedido.getEstado());
         }
-        if (pedido.getCantProductos() == 0) {
+        if (serverPedido.getCantProductos() == 0) {
             throw new IllegalStateException(
-                "No se puede enviar a cocina un pedido sin productos.");
+                    "No se puede enviar a cocina un pedido sin productos.");
         }
-        pedido.setEstado(EstadoPedido.EN_PREPARACION);
-        actualizar(pedido);
+        serverPedido.setEstado(EstadoPedido.EN_PREPARACION);
+        actualizar(serverPedido);
     }
 
     @Override
@@ -55,12 +63,18 @@ public class OrderService implements OrderInterface {
         return actualizar(pedido);
     }
 
+    // ── FIX: igual que enviarPedidoACocina — leer carrito del servidor,
+    //         no del objeto que llegó por RMI (puede estar vacío).
     @Override
     public double calcularFactura(Order pedido) throws RemoteException {
         if (pedido == null) throw new IllegalArgumentException("Pedido nulo.");
 
+        Order serverPedido = buscarPedido(pedido.getOrderId());
+        if (serverPedido == null)
+            throw new IllegalArgumentException("Pedido no encontrado en servidor: " + pedido.getOrderId());
+
         double subtotal = 0.0;
-        Iterator<Product> it = pedido.getCarrito().iterator();
+        Iterator<Product> it = serverPedido.getCarrito().iterator();
         while (it.hasNext()) {
             Product p = it.next();
             if (p != null && p.isDisponible()) {
@@ -69,15 +83,15 @@ public class OrderService implements OrderInterface {
         }
 
         double iva   = subtotal * IVA;
-        double domi  = pedido.isPremium() ? 0.0 : COSTO_DOMI_STD;
+        double domi  = serverPedido.isPremium() ? 0.0 : COSTO_DOMI_STD;
         double total = subtotal + iva + domi;
 
-        pedido.setSubtotal(subtotal);
-        pedido.setImpuesto(iva);
-        pedido.setCostoDomi(domi);
-        pedido.setTotal(total);
+        serverPedido.setSubtotal(subtotal);
+        serverPedido.setImpuesto(iva);
+        serverPedido.setCostoDomi(domi);
+        serverPedido.setTotal(total);
 
-        actualizar(pedido);
+        actualizar(serverPedido);
         return total;
     }
 
@@ -97,7 +111,7 @@ public class OrderService implements OrderInterface {
         if (pedido == null) return false;
         if (pedido.getEstado() != EstadoPedido.PENDIENTE) {
             throw new IllegalStateException(
-                "Solo modificable en PENDIENTE. Estado: " + pedido.getEstado());
+                    "Solo modificable en PENDIENTE. Estado: " + pedido.getEstado());
         }
         return actualizar(pedido);
     }
@@ -109,10 +123,10 @@ public class OrderService implements OrderInterface {
 
         EstadoPedido estado = pedido.getEstado();
         if (estado == EstadoPedido.LISTO     ||
-            estado == EstadoPedido.EN_CAMINO ||
-            estado == EstadoPedido.ENTREGADO) {
+                estado == EstadoPedido.EN_CAMINO ||
+                estado == EstadoPedido.ENTREGADO) {
             throw new IllegalStateException(
-                "No cancelable en estado: " + estado);
+                    "No cancelable en estado: " + estado);
         }
         pedido.setEstado(EstadoPedido.CANCELADO);
         return actualizar(pedido);
@@ -170,8 +184,6 @@ public class OrderService implements OrderInterface {
             if (pedido == null) return null;
             if (pedido.getEstado() == EstadoPedido.CANCELADO) return null;
             if (pedido.getCuadranteDestino() == null) return null;
-            // En la implementación actual, retorna solo el destino
-            // En fases futuras, esto necesitará acceso a KitchenService para calcular ruta
             edu.fsadriann.app.linkedlist.singly.singly.LinkedList<String> ruta = new edu.fsadriann.app.linkedlist.singly.singly.LinkedList<>();
             ruta.add(ORIGEN_BASE);
             ruta.add(pedido.getCuadranteDestino());
@@ -190,7 +202,7 @@ public class OrderService implements OrderInterface {
             if (pedido.getEstado() != EstadoPedido.LISTO)
                 throw new IllegalStateException(
                         "Solo se puede iniciar entrega desde LISTO. Estado actual: "
-                        + pedido.getEstado());
+                                + pedido.getEstado());
             pedido.setEstado(EstadoPedido.EN_CAMINO);
             return actualizar(pedido);
         } catch (RemoteException e) {
@@ -207,7 +219,7 @@ public class OrderService implements OrderInterface {
             if (pedido.getEstado() != EstadoPedido.EN_CAMINO)
                 throw new IllegalStateException(
                         "Solo se puede completar entrega desde EN_CAMINO. Estado actual: "
-                        + pedido.getEstado());
+                                + pedido.getEstado());
             pedido.setEstado(EstadoPedido.ENTREGADO);
             return actualizar(pedido);
         } catch (RemoteException e) {
@@ -224,7 +236,7 @@ public class OrderService implements OrderInterface {
             if (pedido.getEstado() != EstadoPedido.EN_PREPARACION)
                 throw new IllegalStateException(
                         "Solo se puede marcar LISTO desde EN_PREPARACION. Estado actual: "
-                        + pedido.getEstado());
+                                + pedido.getEstado());
             pedido.setEstado(EstadoPedido.LISTO);
             return actualizar(pedido);
         } catch (RemoteException e) {
@@ -232,12 +244,22 @@ public class OrderService implements OrderInterface {
         }
     }
 
+    @Override
+    public edu.fsadriann.app.linkedlist.singly.singly.LinkedList<Order> getPedidosEnPreparacion() throws RemoteException {
+        edu.fsadriann.app.linkedlist.singly.singly.LinkedList<Order> resultado =
+                new edu.fsadriann.app.linkedlist.singly.singly.LinkedList<>();
+        Iterator<Order> it = pedidos.iterator();
+        while (it.hasNext()) {
+            Order o = it.next();
+            if (o != null && o.getEstado() == EstadoPedido.EN_PREPARACION) {
+                resultado.add(o);
+            }
+        }
+        return resultado;
+    }
+
     // ── Helper privado ─────────────────────────────────────────────────────────────
 
-    /**
-     * Reemplaza el pedido en la lista por su versión actualizada.
-     * Usa {@code remove(Predicate)} del JAR.
-     */
     private boolean actualizar(Order order) {
         boolean removed = pedidos.remove(o -> order.getOrderId().equals(o.getOrderId()));
         if (removed) pedidos.add(order);

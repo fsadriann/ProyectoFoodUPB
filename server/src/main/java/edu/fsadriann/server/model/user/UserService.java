@@ -6,14 +6,15 @@ import edu.fsadriann.server.model.order.OrderService;
 import edu.fsadriann.model.iterator.Iterator;
 
 import java.util.Arrays;
-
 import java.rmi.RemoteException;
 
 public class UserService implements UserInterface {
+
     private final LinkedList<User> clientes;
     private final LinkedList<SessionEntry> sesionesActivas;
     private final LinkedList<CredentialEntry> credenciales;
     private final OrderService orderService;
+    private final UserRepository repository = new UserRepository();
 
     private static class SessionEntry {
         private final String sesionId;
@@ -44,7 +45,17 @@ public class UserService implements UserInterface {
         this.sesionesActivas = new LinkedList<>();
         this.credenciales = new LinkedList<>();
         this.orderService = orderService;
-        seedDefaultData();
+        cargarDatos();
+    }
+
+    // Reemplaza seedDefaultData() — carga desde JSON
+    private void cargarDatos() {
+        for (User u : repository.findAllUsers()) {
+            clientes.add(u);
+        }
+        for (UserRepository.CredentialEntry c : repository.findAllCredentials()) {
+            credenciales.add(new CredentialEntry(c.cedula, c.contrasena));
+        }
     }
 
     @Override
@@ -84,6 +95,7 @@ public class UserService implements UserInterface {
         String passGuardada = getContrasena(cedula);
         if (passGuardada == null || !passGuardada.equals(actual)) return false;
         setContrasena(cedula, nueva);
+        repository.saveCredential(cedula, nueva);   // ← persiste
         sesionesActivas.remove(s -> s != null && cedula.equals(s.cedula));
         return true;
     }
@@ -104,8 +116,6 @@ public class UserService implements UserInterface {
     @Override
     public User registrarCliente(User user) throws RemoteException {
         if (user == null) return null;
-
-        // ✅ Corregido: getTelefono() ya es String, no necesita String.valueOf()
         if (buscarClientePorTelefono(user.getTelefono()) != null) {
             throw new IllegalArgumentException(
                     "Teléfono ya registrado: " + user.getTelefono());
@@ -115,8 +125,10 @@ public class UserService implements UserInterface {
                     "Cédula ya registrada: " + user.getCedula());
         }
         clientes.add(user);
+        repository.saveUser(user);                  // ← persiste
         if (getContrasena(user.getCedula()) == null) {
             setContrasena(user.getCedula(), user.getCedula());
+            repository.saveCredential(user.getCedula(), user.getCedula()); // ← persiste
         }
         return user;
     }
@@ -131,9 +143,7 @@ public class UserService implements UserInterface {
         int total = 0;
         Iterator<User> it = clientes.iterator();
         while (it.hasNext()) {
-            if (it.next() != null) {
-                total++;
-            }
+            if (it.next() != null) total++;
         }
         return total;
     }
@@ -142,7 +152,10 @@ public class UserService implements UserInterface {
     public boolean actualizarCliente(User user) throws RemoteException {
         if (user == null || user.getCedula() == null) return false;
         boolean removed = clientes.remove(u -> user.getCedula().equals(u.getCedula()));
-        if (removed) clientes.add(user);
+        if (removed) {
+            clientes.add(user);
+            repository.saveUser(user);              // ← persiste
+        }
         return removed;
     }
 
@@ -158,27 +171,25 @@ public class UserService implements UserInterface {
         if (removed) {
             credenciales.remove(c -> c != null && cedula.equals(c.cedula));
             sesionesActivas.remove(s -> s != null && cedula.equals(s.cedula));
+            repository.deleteUser(cedula);          // ← persiste
+            repository.deleteCredential(cedula);    // ← persiste
         }
         return removed;
     }
 
     @Override
-    public edu.fsadriann.app.linkedlist.singly.singly.LinkedList<Order>
-    getPedidosFrecuentes(String cedula) throws RemoteException {
-        edu.fsadriann.app.linkedlist.singly.singly.LinkedList<Order> resultado = new edu.fsadriann.app.linkedlist.singly.singly.LinkedList<>();
+    public LinkedList<Order> getPedidosFrecuentes(String cedula) throws RemoteException {
+        LinkedList<Order> resultado = new LinkedList<>();
         if (cedula == null || cedula.isBlank() || orderService == null) {
             return resultado;
         }
-
         Order[] pedidos = orderService.getPedidosPorCliente(cedula).toArray();
         if (pedidos == null || pedidos.length == 0) {
             return resultado;
         }
-
         Arrays.sort(pedidos, (a, b) -> Integer.compare(
                 b != null ? b.getCantProductos() : 0,
                 a != null ? a.getCantProductos() : 0));
-
         int total = 0;
         for (Order pedido : pedidos) {
             if (pedido == null) continue;
@@ -187,6 +198,16 @@ public class UserService implements UserInterface {
             if (total == 10) break;
         }
         return resultado;
+    }
+
+    @Override
+    public void registrarCredencial(String cedula, String contrasena) throws RemoteException {
+        if (cedula == null || contrasena == null || contrasena.isBlank())
+            throw new IllegalArgumentException("Cédula y contraseña son obligatorias.");
+        if (buscarPorCedula(cedula) == null)
+            throw new IllegalArgumentException("No existe cliente con cédula: " + cedula);
+        setContrasena(cedula, contrasena);
+        repository.saveCredential(cedula, contrasena); // ← persiste
     }
 
     private User buscarPorCedula(String cedula) {
@@ -230,101 +251,5 @@ public class UserService implements UserInterface {
             }
         }
         credenciales.add(new CredentialEntry(cedula, contrasena));
-    }
-
-    @Override
-    public void registrarCredencial(String cedula, String contrasena) throws RemoteException {
-        if (cedula == null || contrasena == null || contrasena.isBlank())
-            throw new IllegalArgumentException("Cédula y contraseña son obligatorias.");
-        if (buscarPorCedula(cedula) == null)
-            throw new IllegalArgumentException("No existe cliente con cédula: " + cedula);
-        setContrasena(cedula, contrasena);
-    }
-
-    private void seedDefaultData() {
-        User operador = new User(
-                "operator@test.com",
-                "Operador",
-                "Food UPB",
-                Rol.OPERADOR,
-                "1001",
-                false,
-                "3001234560",
-                "Campus UPB",
-                null
-        );
-
-        User cliente = new User(
-                "cliente@upb.com",
-                "Cliente",
-                "Demo",
-                Rol.CLIENTE,
-                "2001",
-                true,
-                "3007654325",
-                "Cra 1 # 1-1",
-                null
-        );
-
-        User admin = new User(
-                "admin@test.com",
-                "Admin",
-                "Sistema",
-                Rol.ADMIN,
-                "1234",
-                true,
-                "3007654324",
-                "Cra 1 # 1-1",
-                null
-        );
-
-        User cocina = new User(
-                "cocina@test.com",
-                "Cocina",
-                "Food UPB",
-                Rol.COCINA,
-                "3001",
-                false,
-                "3106189693",
-                "Central de cocina",
-                null
-        );
-
-        User entrega = new User(
-                "entrega@test.com",
-                "Entrega",
-                "Food UPB",
-                Rol.ENTREGA,
-                "4001",
-                false,
-                "3001555222",
-                "Zona de reparto",
-                null
-        );
-
-        User server = new User(
-                "server@test.com",
-                "Server",
-                "Food UPB",
-                Rol.SERVER,
-                "5001",
-                false,
-                "3005553334",
-                "Panel operativo",
-                null
-        );
-
-        clientes.add(operador);
-        clientes.add(cliente);
-        clientes.add(admin);
-        clientes.add(cocina);
-        clientes.add(entrega);
-        clientes.add(server);
-        setContrasena(operador.getCedula(), "1234");
-        setContrasena(cliente.getCedula(), "1234");
-        setContrasena(admin.getCedula(), "1234");
-        setContrasena(cocina.getCedula(), "1234");
-        setContrasena(entrega.getCedula(), "1234");
-        setContrasena(server.getCedula(), "1234");
     }
 }

@@ -417,6 +417,72 @@ public class ClientModel extends Subject {
         this.currentOrder = null;
     }
 
+    public java.util.List<Order> getPedidosEnPreparacion() {
+        if (!ensureConnected()) return new java.util.ArrayList<>();
+        try {
+            edu.fsadriann.app.linkedlist.singly.singly.LinkedList<Order> lista =
+                    orderService.getPedidosEnPreparacion();
+            java.util.List<Order> resultado = new java.util.ArrayList<>();
+            if (lista == null) return resultado;
+            edu.fsadriann.model.iterator.Iterator<Order> it = lista.iterator();
+            while (it.hasNext()) {
+                Order o = it.next();
+                if (o != null) resultado.add(o);
+            }
+            return resultado;
+        } catch (Exception e) {
+            updateLogger("Error al obtener pedidos en preparacion: " + e.getMessage());
+            return new java.util.ArrayList<>();
+        }
+    }
+
+    public void encolarPedido(Order pedido) {
+        if (!ensureConnected()) return;
+        try {
+            kitchenService.encolarPedido(pedido);
+        } catch (Exception e) {
+            updateLogger("Error al encolar pedido: " + e.getMessage());
+        }
+    }
+
+    public Order procesarSiguientePedido() {
+        if (!ensureConnected()) return null;
+        try {
+            return kitchenService.procesarSiguientePedido();
+        } catch (Exception e) {
+            updateLogger("Error al procesar siguiente pedido: " + e.getMessage());
+            return null;
+        }
+    }
+
+    public boolean marcarPedidoListo(String pedidoId) {
+        if (!ensureConnected()) return false;
+        try {
+            return kitchenService.marcarPedidoListo(pedidoId);
+        } catch (Exception e) {
+            updateLogger("Error al marcar pedido listo: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public int tamanoCola() {
+        if (!ensureConnected()) return 0;
+        try {
+            return kitchenService.tamanoCola();
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    public boolean colaVacia() {
+        if (!ensureConnected()) return true;
+        try {
+            return kitchenService.colaVacia();
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
     private boolean ensureConnected() {
         if (connected && userService != null && productService != null && orderService != null) {
             return true;
@@ -428,5 +494,13 @@ public class ClientModel extends Subject {
     private void updateLogger(String message) {
         this.logger = message;
         this.notifyObservers();
+    }
+
+    public boolean eliminarCliente(String cedula) {
+        return false;
+    }
+
+    public boolean actualizarCliente(User updated) {
+        return true;
     }
 }

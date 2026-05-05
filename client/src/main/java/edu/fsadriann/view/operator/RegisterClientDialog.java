@@ -12,14 +12,19 @@ public class RegisterClientDialog extends JDialog {
 
     private static final Color BG       = Color.WHITE;
     private static final Color BLUE     = new Color(24, 95, 165);
+    private static final Color GREEN    = new Color(40, 167, 69);
     private static final Color BORDER_C = new Color(220, 220, 220);
     private static final Color TEXT2    = new Color(100, 100, 100);
     private static final Color BG2      = new Color(245, 245, 245);
 
-    private JTextField nombreField;
-    private JTextField apellidoField;
-    private JTextField telefonoField;
-    private JTextField direccionField;
+    private JTextField   nombreField;
+    private JTextField   apellidoField;
+    private JTextField   telefonoField;
+    private JTextField   direccionField;
+
+    // FIX: selección de tipo de cliente
+    private JRadioButton estandarRadio;
+    private JRadioButton premiumRadio;
 
     private User result = null;
 
@@ -88,6 +93,32 @@ public class RegisterClientDialog extends JDialog {
         direccionField = styledField("", 20);
         form.add(direccionField, fc);
 
+        // FIX: Tipo de cliente — Estándar / Premium
+        lc.gridy = fc.gridy = 4;
+        form.add(fieldLabel("Tipo *"), lc);
+
+        estandarRadio = new JRadioButton("Estándar");
+        estandarRadio.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        estandarRadio.setBackground(BG);
+        estandarRadio.setSelected(true); // por defecto Estándar
+
+        premiumRadio = new JRadioButton("Premium  (domicilio gratis)");
+        premiumRadio.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        premiumRadio.setBackground(BG);
+        premiumRadio.setForeground(new Color(21, 87, 36));
+
+        ButtonGroup tipoGroup = new ButtonGroup();
+        tipoGroup.add(estandarRadio);
+        tipoGroup.add(premiumRadio);
+
+        JPanel tipoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        tipoPanel.setBackground(BG);
+        tipoPanel.add(estandarRadio);
+        tipoPanel.add(Box.createHorizontalStrut(10));
+        tipoPanel.add(premiumRadio);
+
+        form.add(tipoPanel, fc);
+
         root.add(form, BorderLayout.CENTER);
 
         // ── Botones
@@ -139,9 +170,10 @@ public class RegisterClientDialog extends JDialog {
             return;
         }
 
-        // Cédula interna generada automáticamente (no se muestra al operador)
+        // FIX: usar la selección del operador, no siempre true
+        boolean isPremium = premiumRadio.isSelected();
+
         String cedulaInterna = "CLI-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        // Correo interno derivado del teléfono para cumplir el contrato de User
         String correoInterno = "tel_" + telefono + "@foodupb.local";
 
         result = new User(
@@ -150,7 +182,7 @@ public class RegisterClientDialog extends JDialog {
                 apellido,
                 Rol.CLIENTE,
                 cedulaInterna,
-                true,
+                isPremium,          // ← ya no hardcodeado a true
                 telefono,
                 direccion,
                 null

@@ -10,17 +10,6 @@ import javax.swing.table.DefaultTableModel;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Controlador del catálogo de productos para el flujo del operador.
- *
- * Responsabilidades:
- *  - Cargar el catálogo completo desde el servidor
- *  - Buscar productos por nombre / ID
- *  - Exponer el producto en la fila seleccionada de la tabla (para que
- *    OrderController pueda agregarlo al pedido con doble clic)
- *
- * Toda comunicación con ProductService pasa por ClientModel (RMI encapsulado).
- */
 public class ProductController {
 
 	private final ClientModel  model;
@@ -39,10 +28,6 @@ public class ProductController {
 	// CARGAR CATÁLOGO
 	// ─────────────────────────────────────────────────────────────────────────
 
-	/**
-	 * Carga todos los productos del servidor y los muestra en la tabla de menú.
-	 * Llamado al iniciar la vista y con el botón "Cargar productos".
-	 */
 	public void loadCatalog() {
 		if (!model.isConnected()) {
 			view.setMessage("Sin conexión al servidor. No se puede cargar el catálogo.");
@@ -58,12 +43,6 @@ public class ProductController {
 	// BUSCAR PRODUCTO
 	// ─────────────────────────────────────────────────────────────────────────
 
-	/**
-	 * Busca productos por nombre o ID y actualiza la tabla de menú con los resultados.
-	 * Si la búsqueda está vacía, recarga el catálogo completo.
-	 *
-	 * @param query texto a buscar (nombre parcial o ID exacto)
-	 */
 	public void searchProduct(String query) {
 		if (!model.isConnected()) {
 			view.setMessage("Sin conexión al servidor.");
@@ -88,14 +67,6 @@ public class ProductController {
 	// ACCESO AL PRODUCTO SELECCIONADO
 	// ─────────────────────────────────────────────────────────────────────────
 
-	/**
-	 * Devuelve el producto correspondiente a la fila indicada de la tabla,
-	 * o {@code null} si el índice es inválido.
-	 *
-	 * Usado por OperatorController en el listener de doble clic sobre la tabla.
-	 *
-	 * @param row índice de fila (base 0)
-	 */
 	public Product getDisplayedProduct(int row) {
 		if (row < 0 || row >= displayedProducts.size()) {
 			return null;
@@ -107,10 +78,6 @@ public class ProductController {
 	// HELPER PRIVADO
 	// ─────────────────────────────────────────────────────────────────────────
 
-	/**
-	 * Vuelca una LinkedList de productos en el DefaultTableModel de la vista
-	 * y actualiza el cache local {@code displayedProducts}.
-	 */
 	private void populateTable(LinkedList<Product> products) {
 		displayedProducts.clear();
 

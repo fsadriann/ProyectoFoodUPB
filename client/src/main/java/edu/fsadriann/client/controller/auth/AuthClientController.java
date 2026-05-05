@@ -1,6 +1,7 @@
 package edu.fsadriann.client.controller.auth;
 
 import edu.fsadriann.client.controller.admin.AdminController;
+import edu.fsadriann.client.controller.kitchen.KitchenController;
 import edu.fsadriann.client.controller.operator.OperatorController;
 import edu.fsadriann.client.model.ClientModel;
 import edu.fsadriann.client.router.ViewRouter;
@@ -8,32 +9,42 @@ import edu.fsadriann.server.model.user.Rol;
 import edu.fsadriann.view.auth.LoginView;
 
 public class AuthClientController {
-    private final ClientModel model;
-    private final LoginView loginView;
-    private final OperatorController operatorController;
-    private final AdminController adminController;
-    private final ViewRouter viewRouter;
 
-    public AuthClientController(ClientModel model, LoginView loginView,
+    private final ClientModel       model;
+    private final LoginView         loginView;
+    private final OperatorController operatorController;
+    private final AdminController   adminController;
+    private final KitchenController kitchenController;
+    private final ViewRouter        viewRouter;
+
+    // Rastrear si el kitchenController ya fue inicializado para no
+    // duplicar listeners en cada login del cocinero
+    private boolean kitchenInitialized = false;
+
+    public AuthClientController(ClientModel model,
+                                LoginView loginView,
                                 OperatorController operatorController,
                                 AdminController adminController,
+                                KitchenController kitchenController,
                                 ViewRouter viewRouter) {
-        this.model = model;
-        this.loginView = loginView;
+        this.model              = model;
+        this.loginView          = loginView;
         this.operatorController = operatorController;
-        this.adminController = adminController;
-        this.viewRouter = viewRouter;
+        this.adminController    = adminController;
+        this.kitchenController  = kitchenController;
+        this.viewRouter         = viewRouter;
     }
 
     public void init() {
         loginView.addLoginListener(this::handleLogin);
         operatorController.setLogoutAction(this::showLoginView);
+        kitchenController.setLogoutAction(this::showLoginView);
 
         boolean connected = model.connect();
         loginView.setLoginEnabled(true);
         loginView.setMessage(connected
-                ? "Conexión establecida. Ingresa tus credenciales."
-                : "Sin conexión. Se intentará reconectar al iniciar sesión.");
+                ? "Conexion establecida. Ingresa tus credenciales."
+                : "Sin conexion. Se intentara reconectar al iniciar sesion.");
         loginView.setVisible(true);
     }
 
@@ -45,7 +56,7 @@ public class AuthClientController {
 
         Rol role = model.login(loginView.getUserText(), loginView.getPasswordText());
         if (role == null) {
-            loginView.showError("Credenciales inválidas.");
+            loginView.showError("Credenciales invalidas.");
             return;
         }
 
@@ -58,14 +69,25 @@ public class AuthClientController {
         if (role == Rol.ADMIN) {
             adminController.init();
         }
+        if (role == Rol.COCINA) {
+            // init() solo la primera vez para no duplicar listeners del timer
+            if (!kitchenInitialized) {
+                kitchenController.init();
+                kitchenInitialized = true;
+            } else {
+                // En logins posteriores solo relanzar el refresh
+                kitchenController.show();
+            }
+        }
 
         viewRouter.show(role);
     }
 
     private void showLoginView() {
         model.logout();
+        kitchenInitialized = false; // resetear para proxima sesion limpia
         viewRouter.showLogin();
         loginView.setVisible(true);
-        loginView.setMessage("Sesión cerrada.");
+        loginView.setMessage("Sesion cerrada.");
     }
 }

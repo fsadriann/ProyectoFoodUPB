@@ -1,0 +1,82 @@
+[
+  {
+    "productoId": "1",
+    "nombre": "Bandeja Paisa",
+    "descripcion": "Frijoles, chicharrón, carne molida, chorizo, morcilla, arepa y arroz.",
+    "categoria": "PLATO_PRINCIPAL",
+    "precio": 28000,
+    "cantidad": 1,
+    "isComplejo": true,
+    "disponible": true
+  },
+  {
+    "productoId": "2",
+    "nombre": "Hamburguesa",
+    "descripcion": "Carne de res, lechuga, tomate, queso y salsa especial.",
+    "categoria": "PLATO_PRINCIPAL",
+    "precio": 18000,
+    "cantidad": 1,
+    "isComplejo": false,
+    "disponible": true
+  },
+  {
+    "productoId": "3",
+    "nombre": "Pizza",
+    "descripcion": "Pizza personal con salsa de tomate, queso mozzarella e ingredientes a elección.",
+    "categoria": "PLATO_PRINCIPAL",
+    "precio": 22000,
+    "cantidad": 1,
+    "isComplejo": true,
+    "disponible": true
+  },
+  {
+    "productoId": "4",
+    "nombre": "Gaseosa",
+    "descripcion": "Gaseosa 350 ml a elección.",
+    "categoria": "BEBIDA",
+    "precio": 5000,
+    "cantidad": 1,
+    "isComplejo": false,
+    "disponible": true
+  },
+  {
+    "productoId": "5",
+    "nombre": "Papas Fritas",
+    "descripcion": "Porción de papas fritas crujientes con salsa a elección.",
+    "categoria": "ENTRADA",
+    "precio": 8000,
+    "cantidad": 1,
+    "isComplejo": false,
+    "disponible": true
+  },
+  {
+    "productoId": "6",
+    "nombre": "Arroz con Pollo",
+    "descripcion": "Arroz con pollo desmechado, verduras salteadas y ensalada.",
+    "categoria": "PLATO_PRINCIPAL",
+    "precio": 20000,
+    "cantidad": 1,
+    "isComplejo": false,
+    "disponible": true
+  },
+  {
+    "productoId": "7",
+    "nombre": "Limonada",
+    "descripcion": "Limonada natural o de coco 400 ml.",
+    "categoria": "BEBIDA",
+    "precio": 6000,
+    "cantidad": 1,
+    "isComplejo": false,
+    "disponible": true
+  },
+  {
+    "productoId": "8",
+    "nombre": "Brownie",
+    "descripcion": "Brownie de chocolate con helado de vainilla.",
+    "categoria": "POSTRE",
+    "precio": 7000,
+    "cantidad": 1,
+    "isComplejo": false,
+    "disponible": true
+  }
+]

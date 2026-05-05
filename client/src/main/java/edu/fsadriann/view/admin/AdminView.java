@@ -35,6 +35,9 @@ public class AdminView extends JFrame {
     private JLabel statusLabel;
     private JButton logoutBtn;
     private JButton addUserBtn;
+    private JButton editUserBtn;    // ← NUEVO
+    private JButton deleteUserBtn;  // ← NUEVO
+    private JTable usersTable;      // ← NUEVO
     private DefaultTableModel tableModel;
     private final CardLayout sectionLayout = new CardLayout();
     private JPanel sectionCards;
@@ -74,19 +77,16 @@ public class AdminView extends JFrame {
         JPanel top = new JPanel(new BorderLayout());
         top.setBackground(BG);
         top.setBorder(BorderFactory.createCompoundBorder(
-            new MatteBorder(0, 0, 1, 0, BORDER_C),
-            new EmptyBorder(10, 20, 10, 20)
+                new MatteBorder(0, 0, 1, 0, BORDER_C),
+                new EmptyBorder(10, 20, 10, 20)
         ));
-
         JLabel title = new JLabel("Food UPB — Administrador");
         title.setFont(new Font("SansSerif", Font.BOLD, 15));
         title.setForeground(BLUE);
-
         logoutBtn = new JButton("Cerrar sesión");
         logoutBtn.setFont(new Font("SansSerif", Font.PLAIN, 12));
         logoutBtn.setFocusPainted(false);
         logoutBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
         top.add(title,     BorderLayout.WEST);
         top.add(logoutBtn, BorderLayout.EAST);
         return top;
@@ -96,8 +96,8 @@ public class AdminView extends JFrame {
         JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         bar.setBackground(BG);
         bar.setBorder(BorderFactory.createCompoundBorder(
-            new MatteBorder(0, 0, 1, 0, BORDER_C),
-            new EmptyBorder(0, 12, 0, 12)
+                new MatteBorder(0, 0, 1, 0, BORDER_C),
+                new EmptyBorder(0, 12, 0, 12)
         ));
         addTab(bar, SEC_REPORTS,  "Reportes",   true);
         addTab(bar, SEC_USERS,    "Usuarios",   false);
@@ -122,8 +122,8 @@ public class AdminView extends JFrame {
         btn.setFont(new Font("SansSerif", active ? Font.BOLD : Font.PLAIN, 13));
         btn.setForeground(active ? BLUE : TEXT2);
         btn.setBorder(BorderFactory.createCompoundBorder(
-            new MatteBorder(0, 0, active ? 2 : 0, 0, BLUE),
-            new EmptyBorder(10, 14, 10, 14)
+                new MatteBorder(0, 0, active ? 2 : 0, 0, BLUE),
+                new EmptyBorder(10, 14, 10, 14)
         ));
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         return btn;
@@ -141,11 +141,10 @@ public class AdminView extends JFrame {
     private JPanel buildSummary() {
         JPanel panel = new JPanel(new GridLayout(1, 4, 10, 0));
         panel.setOpaque(false);
-
         JPanel usersCard = card();
         usersCard.setLayout(new BoxLayout(usersCard, BoxLayout.Y_AXIS));
         usersCard.setBorder(BorderFactory.createCompoundBorder(
-            new LineBorder(BORDER_C), new EmptyBorder(10, 12, 10, 12)));
+                new LineBorder(BORDER_C), new EmptyBorder(10, 12, 10, 12)));
         JLabel uLabel = new JLabel("Usuarios");
         uLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
         uLabel.setForeground(TEXT2);
@@ -156,7 +155,6 @@ public class AdminView extends JFrame {
         usersCard.add(Box.createVerticalStrut(4));
         usersCard.add(totalUsersValue);
         usersCard.add(Box.createVerticalGlue());
-
         panel.add(usersCard);
         panel.add(metricTile("Pedidos",  "—"));
         panel.add(metricTile("Cocina",   "—"));
@@ -180,59 +178,73 @@ public class AdminView extends JFrame {
         JPanel card = card();
         card.setLayout(new BorderLayout(0, 14));
         card.setBorder(new EmptyBorder(16, 18, 16, 18));
-
         JPanel metrics = new JPanel(new GridLayout(1, 4, 10, 0));
         metrics.setOpaque(false);
         metrics.add(metricTile("Pedidos hoy",     "—"));
         metrics.add(metricTile("Ingresos hoy",    "—"));
         metrics.add(metricTile("Clientes nuevos", "—"));
         metrics.add(metricTile("Tiempo prom.",    "—"));
-
         String[] cols = {"Operador", "Pedidos", "Clientes atendidos", "Tiempo prom.", "Estado"};
         DefaultTableModel rm = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         JScrollPane rs = new JScrollPane(styledTable(rm));
         rs.setBorder(new MatteBorder(1, 0, 0, 0, BORDER_C));
-
         card.add(metrics, BorderLayout.NORTH);
         card.add(rs,      BorderLayout.CENTER);
         return card;
     }
 
+    // ── USUARIOS — con botones Editar y Eliminar ──────────────────────────────
     private JPanel buildUsersSection() {
         JPanel card = card();
         card.setLayout(new BorderLayout(0, 12));
         card.setBorder(new EmptyBorder(16, 18, 16, 18));
 
+        // Header con título y botón nuevo
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
-
         JLabel t = new JLabel("Gestión de usuarios");
         t.setFont(new Font("SansSerif", Font.BOLD, 16));
         t.setForeground(TEXT);
-
         addUserBtn = new JButton("+ Nuevo usuario");
-        addUserBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
-        addUserBtn.setBackground(BLUE);
-        addUserBtn.setForeground(Color.WHITE);
-        addUserBtn.setOpaque(true);
-        addUserBtn.setBorderPainted(false);
-        addUserBtn.setFocusPainted(false);
-        addUserBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
+        styleBtn(addUserBtn, BLUE, Color.WHITE);
         header.add(t,          BorderLayout.WEST);
         header.add(addUserBtn, BorderLayout.EAST);
 
+        // Tabla
         String[] columns = {"Nombre", "Apellido", "Teléfono", "Correo", "Rol", "Dirección"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
-        JScrollPane scroll = new JScrollPane(styledTable(tableModel));
+        usersTable = styledTable(tableModel);
+        usersTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        JScrollPane scroll = new JScrollPane(usersTable);
         scroll.setBorder(new MatteBorder(1, 0, 0, 0, BORDER_C));
 
-        card.add(header, BorderLayout.NORTH);
-        card.add(scroll, BorderLayout.CENTER);
+        // Botones editar / eliminar
+        editUserBtn   = new JButton("Editar");
+        deleteUserBtn = new JButton("Eliminar");
+        styleBtn(editUserBtn,   new Color(40, 167, 69), Color.WHITE);
+        styleBtn(deleteUserBtn, DANGER, Color.WHITE);
+        editUserBtn.setEnabled(false);
+        deleteUserBtn.setEnabled(false);
+
+        // Habilitar botones solo cuando hay fila seleccionada
+        usersTable.getSelectionModel().addListSelectionListener(e -> {
+            boolean selected = usersTable.getSelectedRow() >= 0;
+            editUserBtn.setEnabled(selected);
+            deleteUserBtn.setEnabled(selected);
+        });
+
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        actions.setOpaque(false);
+        actions.add(editUserBtn);
+        actions.add(deleteUserBtn);
+
+        card.add(header,  BorderLayout.NORTH);
+        card.add(scroll,  BorderLayout.CENTER);
+        card.add(actions, BorderLayout.SOUTH);
         return card;
     }
 
@@ -240,18 +252,15 @@ public class AdminView extends JFrame {
         JPanel card = card();
         card.setLayout(new BorderLayout(0, 12));
         card.setBorder(new EmptyBorder(16, 18, 16, 18));
-
         JLabel t = new JLabel("Catálogo de productos");
         t.setFont(new Font("SansSerif", Font.BOLD, 16));
         t.setForeground(TEXT);
-
         String[] cols = {"Nombre", "Precio", "Preparación", "Tipo", "Estado"};
         DefaultTableModel pm = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         JScrollPane ps = new JScrollPane(styledTable(pm));
         ps.setBorder(new MatteBorder(1, 0, 0, 0, BORDER_C));
-
         card.add(t,  BorderLayout.NORTH);
         card.add(ps, BorderLayout.CENTER);
         return card;
@@ -261,27 +270,23 @@ public class AdminView extends JFrame {
         JPanel card = card();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBorder(new EmptyBorder(16, 18, 16, 18));
-
         JLabel t = new JLabel("Cuadrantes de entrega");
         t.setFont(new Font("SansSerif", Font.BOLD, 16));
         t.setForeground(TEXT);
         t.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(t);
         card.add(Box.createVerticalStrut(14));
-
         JPanel grid = new JPanel(new GridLayout(2, 3, 10, 10));
         grid.setOpaque(false);
         grid.setAlignmentX(Component.LEFT_ALIGNMENT);
-
         String[][] cuads = {
-            {"A", "Centro · Cabecera",   "$2.500"},
-            {"B", "Laureles · Cabecera", "$3.500"},
-            {"C", "Floridablanca",       "$5.000"},
-            {"D", "Girón",              "$6.500"},
-            {"E", "Piedecuesta",        "$8.000"},
+                {"A", "Centro · Cabecera",   "$2.500"},
+                {"B", "Laureles · Cabecera", "$3.500"},
+                {"C", "Floridablanca",       "$5.000"},
+                {"D", "Girón",               "$6.500"},
+                {"E", "Piedecuesta",         "$8.000"},
         };
         for (String[] c : cuads) grid.add(buildCuadCell(c[0], c[1], c[2]));
-
         JPanel ph = card();
         ph.setLayout(new BorderLayout());
         JLabel phLbl = new JLabel("+ Agregar cuadrante", SwingConstants.CENTER);
@@ -289,7 +294,6 @@ public class AdminView extends JFrame {
         phLbl.setForeground(TEXT3);
         ph.add(phLbl, BorderLayout.CENTER);
         grid.add(ph);
-
         card.add(grid);
         return card;
     }
@@ -297,11 +301,12 @@ public class AdminView extends JFrame {
     private JPanel buildCuadCell(String name, String sub, String tarifa) {
         JPanel c = card();
         c.setLayout(new BoxLayout(c, BoxLayout.Y_AXIS));
-        c.setBorder(BorderFactory.createCompoundBorder(new LineBorder(BORDER_C), new EmptyBorder(10, 12, 10, 12)));
-        JLabel nameLbl = new JLabel("Cuadrante " + name);
+        c.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(BORDER_C), new EmptyBorder(10, 12, 10, 12)));
+        JLabel nameLbl   = new JLabel("Cuadrante " + name);
         nameLbl.setFont(new Font("SansSerif", Font.BOLD, 13));
         nameLbl.setForeground(TEXT);
-        JLabel subLbl = new JLabel(sub);
+        JLabel subLbl    = new JLabel(sub);
         subLbl.setFont(new Font("SansSerif", Font.PLAIN, 11));
         subLbl.setForeground(TEXT3);
         JLabel tarifaLbl = new JLabel("Tarifa: " + tarifa);
@@ -319,18 +324,15 @@ public class AdminView extends JFrame {
         JPanel card = card();
         card.setLayout(new BorderLayout(0, 12));
         card.setBorder(new EmptyBorder(16, 18, 16, 18));
-
         JLabel t = new JLabel("Bitácora de auditoría");
         t.setFont(new Font("SansSerif", Font.BOLD, 16));
         t.setForeground(TEXT);
-
         String[] cols = {"Fecha / hora", "Usuario", "Acción", "Detalle"};
         DefaultTableModel am = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         JScrollPane as = new JScrollPane(styledTable(am));
         as.setBorder(new MatteBorder(1, 0, 0, 0, BORDER_C));
-
         card.add(t,  BorderLayout.NORTH);
         card.add(as, BorderLayout.CENTER);
         return card;
@@ -343,8 +345,8 @@ public class AdminView extends JFrame {
             btn.setFont(new Font("SansSerif", active ? Font.BOLD : Font.PLAIN, 13));
             btn.setForeground(active ? BLUE : TEXT2);
             btn.setBorder(BorderFactory.createCompoundBorder(
-                new MatteBorder(0, 0, active ? 2 : 0, 0, BLUE),
-                new EmptyBorder(10, 14, 10, 14)
+                    new MatteBorder(0, 0, active ? 2 : 0, 0, BLUE),
+                    new EmptyBorder(10, 14, 10, 14)
             ));
         });
     }
@@ -353,8 +355,8 @@ public class AdminView extends JFrame {
         JPanel bar = new JPanel(new BorderLayout());
         bar.setBackground(BG);
         bar.setBorder(BorderFactory.createCompoundBorder(
-            new MatteBorder(1, 0, 0, 0, BORDER_C),
-            new EmptyBorder(6, 18, 6, 18)
+                new MatteBorder(1, 0, 0, 0, BORDER_C),
+                new EmptyBorder(6, 18, 6, 18)
         ));
         statusLabel = new JLabel("Listo");
         statusLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
@@ -376,7 +378,7 @@ public class AdminView extends JFrame {
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
         p.setBackground(BG);
         p.setBorder(BorderFactory.createCompoundBorder(
-            new LineBorder(BORDER_C), new EmptyBorder(10, 12, 10, 12)));
+                new LineBorder(BORDER_C), new EmptyBorder(10, 12, 10, 12)));
         JLabel lbl = new JLabel(label);
         lbl.setFont(new Font("SansSerif", Font.PLAIN, 11));
         lbl.setForeground(TEXT2);
@@ -406,12 +408,22 @@ public class AdminView extends JFrame {
         return table;
     }
 
+    private void styleBtn(JButton btn, Color bg, Color fg) {
+        btn.setFont(new Font("SansSerif", Font.BOLD, 12));
+        btn.setBackground(bg);
+        btn.setForeground(fg);
+        btn.setOpaque(true);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+    }
+
     private JTextField field(String placeholder) {
         JTextField f = new JTextField(placeholder);
         f.setFont(new Font("SansSerif", Font.PLAIN, 13));
         f.setForeground(TEXT2);
         f.setBorder(BorderFactory.createCompoundBorder(
-            new LineBorder(BORDER_C), new EmptyBorder(6, 10, 6, 10)));
+                new LineBorder(BORDER_C), new EmptyBorder(6, 10, 6, 10)));
         return f;
     }
 
@@ -428,14 +440,48 @@ public class AdminView extends JFrame {
         return panel;
     }
 
-    // ── Public API ─────────────────────────────────────────────────────────────
+    // ── Public API ────────────────────────────────────────────────────────────
 
-    public void addLogoutListener(Runnable action) { logoutBtn.addActionListener(e -> action.run()); }
+    public void addLogoutListener(Runnable action) {
+        logoutBtn.addActionListener(e -> action.run());
+    }
 
-    public void addOpenUserFormListener(Runnable action) { addUserBtn.addActionListener(e -> action.run()); }
+    public void addOpenUserFormListener(Runnable action) {
+        addUserBtn.addActionListener(e -> action.run());
+    }
+
+    public void addEditUserListener(Runnable action) {
+        editUserBtn.addActionListener(e -> action.run());
+    }
+
+    public void addDeleteUserListener(Runnable action) {
+        deleteUserBtn.addActionListener(e -> action.run());
+    }
+
+    public int getSelectedUserRow() {
+        return usersTable.getSelectedRow();
+    }
+
+    public String getSelectedUserTelefono() {
+        int row = usersTable.getSelectedRow();
+        if (row < 0) return null;
+        return (String) tableModel.getValueAt(row, 2); // columna Teléfono
+    }
 
     public void showUserForm(Consumer<AdminUserFormData> onSave) {
-        JDialog dialog = new JDialog(frame, "Nuevo usuario", true);
+        showUserFormInternal("Nuevo usuario", null, onSave);
+    }
+
+    public void showEditUserForm(String nombre, String apellido, String telefono,
+                                 String correo, String rol, String direccion,
+                                 Consumer<AdminUserFormData> onSave) {
+        showUserFormInternal("Editar usuario",
+                new String[]{nombre, apellido, telefono, correo, rol, direccion}, onSave);
+    }
+
+    private void showUserFormInternal(String title, String[] prefill,
+                                      Consumer<AdminUserFormData> onSave) {
+        JDialog dialog = new JDialog(frame, title, true);
         dialog.setSize(760, 540);
         dialog.setLocationRelativeTo(frame);
 
@@ -446,16 +492,17 @@ public class AdminView extends JFrame {
         JPanel form = new JPanel(new GridLayout(0, 2, 12, 10));
         form.setOpaque(false);
 
-        JTextField nombre    = field("Nombre");
-        JTextField apellido  = field("Apellido");
-        JTextField telefono  = field("Teléfono");
-        JTextField correo    = field("Correo");
+        JTextField nombre    = field(prefill != null ? prefill[0] : "Nombre");
+        JTextField apellido  = field(prefill != null ? prefill[1] : "Apellido");
+        JTextField telefono  = field(prefill != null ? prefill[2] : "Teléfono");
+        JTextField correo    = field(prefill != null ? prefill[3] : "Correo");
         JPasswordField clave = new JPasswordField();
         clave.setFont(new Font("SansSerif", Font.PLAIN, 13));
         clave.setBorder(BorderFactory.createCompoundBorder(
-            new LineBorder(BORDER_C), new EmptyBorder(6, 10, 6, 10)));
+                new LineBorder(BORDER_C), new EmptyBorder(6, 10, 6, 10)));
         JComboBox<String> rol = new JComboBox<>(
-            new String[]{"CLIENTE", "OPERADOR", "ADMIN", "COCINA", "ENTREGA", "SERVER"});
+                new String[]{"CLIENTE", "OPERADOR", "ADMIN", "COCINA", "ENTREGA", "SERVER"});
+        if (prefill != null && prefill[4] != null) rol.setSelectedItem(prefill[4]);
 
         JTextField calle     = field("Calle");
         JTextField carrera   = field("Carrera/Avenida");
@@ -491,31 +538,26 @@ public class AdminView extends JFrame {
         error.setFont(new Font("SansSerif", Font.PLAIN, 12));
 
         JButton save = new JButton("Guardar");
-        save.setFont(new Font("SansSerif", Font.BOLD, 13));
-        save.setBackground(BLUE);
-        save.setForeground(Color.WHITE);
-        save.setOpaque(true);
-        save.setBorderPainted(false);
-        save.setFocusPainted(false);
+        styleBtn(save, BLUE, Color.WHITE);
         save.addActionListener(e -> {
             String n = nombre.getText().trim();
             String a = apellido.getText().trim();
-            String t = telefono.getText().trim();
+            String te = telefono.getText().trim();
             String c = correo.getText().trim();
             String p = new String(clave.getPassword()).trim();
             String r = String.valueOf(rol.getSelectedItem());
-            if (n.isBlank() || a.isBlank() || t.isBlank() || c.isBlank() || p.isBlank()) {
-                error.setText("Nombre, apellido, teléfono, correo y contraseña son obligatorios.");
+            if (n.isBlank() || a.isBlank() || te.isBlank() || c.isBlank()) {
+                error.setText("Nombre, apellido, teléfono y correo son obligatorios.");
                 return;
             }
             String direccion = "";
             if ("CLIENTE".equals(r)) {
                 direccion = String.format("%s %s %s %s, %s, %s",
-                    calle.getText().trim(), carrera.getText().trim(),
-                    numero.getText().trim(), casa.getText().trim(),
-                    barrio.getText().trim(), municipio.getText().trim()).trim();
+                        calle.getText().trim(), carrera.getText().trim(),
+                        numero.getText().trim(), casa.getText().trim(),
+                        barrio.getText().trim(), municipio.getText().trim()).trim();
             }
-            onSave.accept(new AdminUserFormData(n, a, t, c, p, r, direccion));
+            onSave.accept(new AdminUserFormData(n, a, te, c, p, r, direccion));
             dialog.dispose();
         });
 
@@ -532,9 +574,9 @@ public class AdminView extends JFrame {
 
     public void addUserRow(AdminUserFormData data) {
         tableModel.addRow(new Object[]{
-            data.getNombre(), data.getApellido(), data.getTelefono(),
-            data.getCorreo(), data.getRol(),
-            data.getDireccionCompleta().isBlank() ? "—" : data.getDireccionCompleta()
+                data.getNombre(), data.getApellido(), data.getTelefono(),
+                data.getCorreo(), data.getRol(),
+                data.getDireccionCompleta().isBlank() ? "—" : data.getDireccionCompleta()
         });
     }
 
@@ -547,17 +589,19 @@ public class AdminView extends JFrame {
                 User u = it.next();
                 if (u == null) continue;
                 tableModel.addRow(new Object[]{
-                    u.getNombres(), u.getApellidos(),
-                    String.valueOf(u.getTelefono()), u.getId(),
-                    u.getRol() != null ? u.getRol().name() : "—",
-                    u.getDireccion() == null || u.getDireccion().isBlank() ? "—" : u.getDireccion()
+                        u.getNombres(), u.getApellidos(),
+                        u.getTelefono(), u.getId(),
+                        u.getRol() != null ? u.getRol().name() : "—",
+                        u.getDireccion() == null || u.getDireccion().isBlank() ? "—" : u.getDireccion()
                 });
             }
         });
     }
 
     public void setTotalUsers(int n) {
-        SwingUtilities.invokeLater(() -> { if (totalUsersValue != null) totalUsersValue.setText(String.valueOf(n)); });
+        SwingUtilities.invokeLater(() -> {
+            if (totalUsersValue != null) totalUsersValue.setText(String.valueOf(n));
+        });
     }
 
     public void setMessage(String message) {

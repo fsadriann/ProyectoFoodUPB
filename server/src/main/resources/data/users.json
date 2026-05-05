@@ -1,0 +1,62 @@
+[
+  {
+    "id": "operator@test.com",
+    "nombres": "Operador",
+    "apellidos": "Food UPB",
+    "rol": "OPERADOR",
+    "cedula": "1001",
+    "isPremium": false,
+    "telefono": "3001234560",
+    "direccion": "Campus UPB"
+  },
+  {
+    "id": "cliente@upb.com",
+    "nombres": "Cliente",
+    "apellidos": "Demo",
+    "rol": "CLIENTE",
+    "cedula": "2001",
+    "isPremium": true,
+    "telefono": "3007654325",
+    "direccion": "Cra 1 # 1-1"
+  },
+  {
+    "id": "admin@test.com",
+    "nombres": "Admin",
+    "apellidos": "Sistema",
+    "rol": "ADMIN",
+    "cedula": "1234",
+    "isPremium": true,
+    "telefono": "3007654324",
+    "direccion": "Cra 1 # 1-1"
+  },
+  {
+    "id": "cocina@test.com",
+    "nombres": "Cocina",
+    "apellidos": "Food UPB",
+    "rol": "COCINA",
+    "cedula": "3001",
+    "isPremium": false,
+    "telefono": "3106189693",
+    "direccion": "Central de cocina"
+  },
+  {
+    "id": "entrega@test.com",
+    "nombres": "Entrega",
+    "apellidos": "Food UPB",
+    "rol": "ENTREGA",
+    "cedula": "4001",
+    "isPremium": false,
+    "telefono": "3001555222",
+    "direccion": "Zona de reparto"
+  },
+  {
+    "id": "server@test.com",
+    "nombres": "Server",
+    "apellidos": "Food UPB",
+    "rol": "SERVER",
+    "cedula": "5001",
+    "isPremium": false,
+    "telefono": "3005553334",
+    "direccion": "Panel operativo"
+  }
+]

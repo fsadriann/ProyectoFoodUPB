@@ -31,6 +31,7 @@ public class OperatorView extends JFrame {
     private JLabel clientNameLabel;
     private JLabel clientAddressLabel;
     private JLabel clientPhoneLabel;
+    private JLabel clientTipoLabel;       // FIX: muestra Estándar / Premium
 
     private JPanel frequentOrdersSection;
     private JPanel frequentOrdersListPanel;
@@ -46,6 +47,7 @@ public class OperatorView extends JFrame {
     private JTable            productsTable;
 
     // ── Right panel — current order ───────────────────────────────────────────
+    // FIX: 4 columnas — Producto | Cant. | Precio unit. | Subtotal
     private DefaultTableModel currentOrderModel;
     private JTable            currentOrderTable;
     private JButton           removeProductBtn;
@@ -62,6 +64,7 @@ public class OperatorView extends JFrame {
     private JLabel            invoiceIvaVal;
     private JLabel            invoiceDomicilioVal;
     private JLabel            invoiceTotalVal;
+    // FIX: tabla de factura también con 4 columnas
     private DefaultTableModel invoiceOrderModel;
     private JTable            invoiceOrderTable;
     private JButton           clearInvoiceOrderBtn;
@@ -74,7 +77,7 @@ public class OperatorView extends JFrame {
     public OperatorView(String operadorEmail) {
         super("Food UPB — Operador");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setMinimumSize(new Dimension(1100, 680));
+        setMinimumSize(new Dimension(1150, 700));
         setBackground(BG);
     }
 
@@ -98,28 +101,37 @@ public class OperatorView extends JFrame {
     // ─────────────────────────────────────────────────────────────────────────
 
     private void initModels() {
-        clientTableModel = new DefaultTableModel(new Object[]{"Nombres", "Correo", "Teléfono"}, 0) {
+        clientTableModel = new DefaultTableModel(
+                new Object[]{"Nombres", "Correo", "Teléfono", "Tipo"}, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
-        recentOrdersModel = new DefaultTableModel(new Object[]{"Pedido", "Estado", "Ítems", "Total"}, 0) {
+        recentOrdersModel = new DefaultTableModel(
+                new Object[]{"Pedido", "Estado", "Ítems", "Total"}, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
-        productsTableModel = new DefaultTableModel(new Object[]{"ID", "Nombre", "Categoría", "Precio", "Disponible"}, 0) {
+        productsTableModel = new DefaultTableModel(
+                new Object[]{"ID", "Nombre", "Categoría", "Precio", "Disponible"}, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
-        currentOrderModel = new DefaultTableModel(new Object[]{"Producto", "Cant."}, 0) {
+
+        // FIX: 4 columnas en el pedido actual
+        currentOrderModel = new DefaultTableModel(
+                new Object[]{"Producto", "Cant.", "Precio unit.", "Subtotal"}, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
-        invoiceOrderModel = new DefaultTableModel(new Object[]{"Producto", "Cant."}, 0) {
+
+        // FIX: 4 columnas en la tabla de factura
+        invoiceOrderModel = new DefaultTableModel(
+                new Object[]{"Producto", "Cant.", "Precio unit.", "Subtotal"}, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
     }
 
     private void wireModelListeners() {
         clientTableModel.addTableModelListener(e ->
-            SwingUtilities.invokeLater(this::refreshClientCard));
+                SwingUtilities.invokeLater(this::refreshClientCard));
         recentOrdersModel.addTableModelListener(e ->
-            SwingUtilities.invokeLater(this::refreshFrequentOrders));
+                SwingUtilities.invokeLater(this::refreshFrequentOrders));
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -130,8 +142,8 @@ public class OperatorView extends JFrame {
         JPanel top = new JPanel(new BorderLayout());
         top.setBackground(BG);
         top.setBorder(BorderFactory.createCompoundBorder(
-            new MatteBorder(0, 0, 1, 0, BORDER_C),
-            new EmptyBorder(10, 20, 10, 20)
+                new MatteBorder(0, 0, 1, 0, BORDER_C),
+                new EmptyBorder(10, 20, 10, 20)
         ));
 
         JLabel title = new JLabel("Food UPB — Operador");
@@ -156,8 +168,8 @@ public class OperatorView extends JFrame {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         panel.setBackground(BG);
         panel.setBorder(BorderFactory.createCompoundBorder(
-            new MatteBorder(0, 0, 1, 0, BORDER_C),
-            new EmptyBorder(8, 20, 8, 20)
+                new MatteBorder(0, 0, 1, 0, BORDER_C),
+                new EmptyBorder(8, 20, 8, 20)
         ));
 
         String[] steps = {"1  Identificar", "2  Pedido", "3  Factura", "4  Confirmar"};
@@ -234,7 +246,7 @@ public class OperatorView extends JFrame {
         searchCard.setLayout(new BoxLayout(searchCard, BoxLayout.Y_AXIS));
         searchCard.setBackground(BG);
         searchCard.setBorder(BorderFactory.createCompoundBorder(
-            new LineBorder(BORDER_C), new EmptyBorder(10, 12, 10, 12)));
+                new LineBorder(BORDER_C), new EmptyBorder(10, 12, 10, 12)));
         searchCard.setAlignmentX(Component.LEFT_ALIGNMENT);
         searchCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 110));
 
@@ -250,7 +262,7 @@ public class OperatorView extends JFrame {
         searchPhoneField.setFont(new Font("SansSerif", Font.PLAIN, 12));
         searchPhoneField.setForeground(TEXT2);
         searchPhoneField.setBorder(BorderFactory.createCompoundBorder(
-            new LineBorder(BORDER_C), new EmptyBorder(4, 8, 4, 8)));
+                new LineBorder(BORDER_C), new EmptyBorder(4, 8, 4, 8)));
         searchClientBtn = smallBtn("Buscar", BLUE, Color.WHITE);
         searchRow.add(searchPhoneField, BorderLayout.CENTER);
         searchRow.add(searchClientBtn,  BorderLayout.EAST);
@@ -261,9 +273,9 @@ public class OperatorView extends JFrame {
         clientInfoPanel.setLayout(new BoxLayout(clientInfoPanel, BoxLayout.Y_AXIS));
         clientInfoPanel.setBackground(BG);
         clientInfoPanel.setBorder(BorderFactory.createCompoundBorder(
-            new LineBorder(BORDER_C), new EmptyBorder(12, 14, 12, 14)));
+                new LineBorder(BORDER_C), new EmptyBorder(12, 14, 12, 14)));
         clientInfoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        clientInfoPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 110));
+        clientInfoPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 130));
 
         clientNameLabel = new JLabel("—");
         clientNameLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
@@ -279,11 +291,19 @@ public class OperatorView extends JFrame {
         clientPhoneLabel.setForeground(TEXT3);
         clientPhoneLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
+        // FIX: etiqueta de tipo de cliente (Premium / Estándar)
+        clientTipoLabel = new JLabel("—");
+        clientTipoLabel.setFont(new Font("SansSerif", Font.BOLD, 11));
+        clientTipoLabel.setForeground(BLUE);
+        clientTipoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
         clientInfoPanel.add(clientNameLabel);
         clientInfoPanel.add(Box.createVerticalStrut(4));
         clientInfoPanel.add(clientAddressLabel);
         clientInfoPanel.add(Box.createVerticalStrut(2));
         clientInfoPanel.add(clientPhoneLabel);
+        clientInfoPanel.add(Box.createVerticalStrut(4));
+        clientInfoPanel.add(clientTipoLabel);
         clientInfoPanel.setVisible(false);
 
         // Frequent orders (hidden until loaded)
@@ -319,6 +339,7 @@ public class OperatorView extends JFrame {
         return scroll;
     }
 
+    // FIX: ahora lee también la columna "Tipo" (índice 3) del clientTableModel
     private void refreshClientCard() {
         if (clientTableModel == null || clientTableModel.getRowCount() == 0) {
             clientInfoPanel.setVisible(false);
@@ -326,8 +347,21 @@ public class OperatorView extends JFrame {
         }
         String name  = String.valueOf(clientTableModel.getValueAt(0, 0));
         String phone = String.valueOf(clientTableModel.getValueAt(0, 2));
+        String tipo  = clientTableModel.getColumnCount() > 3
+                ? String.valueOf(clientTableModel.getValueAt(0, 3)) : "";
+
         clientNameLabel.setText(name);
         clientPhoneLabel.setText(phone);
+
+        if (!tipo.isBlank() && !tipo.equals("null")) {
+            clientTipoLabel.setText(tipo);
+            clientTipoLabel.setForeground(
+                    tipo.toLowerCase().contains("premium") ? GREEN_FG : TEXT2);
+            clientTipoLabel.setVisible(true);
+        } else {
+            clientTipoLabel.setVisible(false);
+        }
+
         clientInfoPanel.setVisible(true);
         clientInfoPanel.revalidate();
         clientInfoPanel.repaint();
@@ -344,8 +378,8 @@ public class OperatorView extends JFrame {
             JPanel row = new JPanel(new BorderLayout(8, 0));
             row.setBackground(BG);
             row.setBorder(BorderFactory.createCompoundBorder(
-                new MatteBorder(0, 0, 1, 0, BORDER_C),
-                new EmptyBorder(6, 8, 6, 8)));
+                    new MatteBorder(0, 0, 1, 0, BORDER_C),
+                    new EmptyBorder(6, 8, 6, 8)));
             row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
             row.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -403,7 +437,7 @@ public class OperatorView extends JFrame {
         searchProductField.setFont(new Font("SansSerif", Font.PLAIN, 12));
         searchProductField.setForeground(TEXT2);
         searchProductField.setBorder(BorderFactory.createCompoundBorder(
-            new LineBorder(BORDER_C), new EmptyBorder(4, 8, 4, 8)));
+                new LineBorder(BORDER_C), new EmptyBorder(4, 8, 4, 8)));
         searchProductField.setPreferredSize(new Dimension(160, 28));
         searchProductField.setMaximumSize(new Dimension(180, 28));
 
@@ -426,6 +460,15 @@ public class OperatorView extends JFrame {
         card.add(header);
         card.add(Box.createVerticalStrut(10));
         card.add(scroll);
+
+        // Ayuda UX: doble clic muestra precio antes de agregar
+        JLabel hint = new JLabel("  Doble clic en un producto para agregarlo al pedido");
+        hint.setFont(new Font("SansSerif", Font.ITALIC, 11));
+        hint.setForeground(TEXT3);
+        hint.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.add(Box.createVerticalStrut(4));
+        card.add(hint);
+
         return card;
     }
 
@@ -437,15 +480,15 @@ public class OperatorView extends JFrame {
         card.add(Box.createVerticalStrut(10));
 
         currentOrderTable = styledTable(currentOrderModel);
-        JScrollPane scroll = tableScroll(currentOrderTable, 130);
+        JScrollPane scroll = tableScroll(currentOrderTable, 150);
         scroll.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(scroll);
         card.add(Box.createVerticalStrut(10));
 
-        removeProductBtn   = smallBtn("Quitar",          BG, TEXT);
-        changeQuantityBtn  = smallBtn("Cambiar cantidad", BG, TEXT);
-        clearOrderBtn      = smallBtn("Limpiar pedido",   BG, TEXT);
-        generateInvoiceBtn = smallBtn("Generar factura",  BLUE, Color.WHITE);
+        removeProductBtn   = smallBtn("Quitar",           BG, TEXT);
+        changeQuantityBtn  = smallBtn("Cambiar cantidad",  BG, TEXT);
+        clearOrderBtn      = smallBtn("Limpiar pedido",    BG, TEXT);
+        generateInvoiceBtn = smallBtn("Generar factura",   BLUE, Color.WHITE);
 
         JPanel btns = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         btns.setOpaque(false);
@@ -494,7 +537,7 @@ public class OperatorView extends JFrame {
         card.add(Box.createVerticalStrut(12));
 
         invoiceOrderTable = styledTable(invoiceOrderModel);
-        JScrollPane invScroll = tableScroll(invoiceOrderTable, 90);
+        JScrollPane invScroll = tableScroll(invoiceOrderTable, 110);
         invScroll.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(invScroll);
         card.add(Box.createVerticalStrut(12));
@@ -526,8 +569,8 @@ public class OperatorView extends JFrame {
         JPanel bar = new JPanel(new BorderLayout());
         bar.setBackground(BG);
         bar.setBorder(BorderFactory.createCompoundBorder(
-            new MatteBorder(1, 0, 0, 0, BORDER_C),
-            new EmptyBorder(6, 20, 6, 20)
+                new MatteBorder(1, 0, 0, 0, BORDER_C),
+                new EmptyBorder(6, 20, 6, 20)
         ));
         statusLabel = new JLabel(" ");
         statusLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
@@ -544,7 +587,7 @@ public class OperatorView extends JFrame {
         JPanel p = new JPanel();
         p.setBackground(BG);
         p.setBorder(BorderFactory.createCompoundBorder(
-            new LineBorder(BORDER_C), new EmptyBorder(12, 14, 12, 14)));
+                new LineBorder(BORDER_C), new EmptyBorder(12, 14, 12, 14)));
         p.setAlignmentX(Component.LEFT_ALIGNMENT);
         return p;
     }
@@ -562,12 +605,12 @@ public class OperatorView extends JFrame {
         btn.setBackground(bg);
         btn.setForeground(fg);
         btn.setOpaque(true);
-        btn.setBorderPainted(bg.equals(BG));
         btn.setFocusPainted(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         if (bg.equals(BG)) {
+            btn.setBorderPainted(true);
             btn.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(BORDER_C), new EmptyBorder(4, 10, 4, 10)));
+                    new LineBorder(BORDER_C), new EmptyBorder(4, 10, 4, 10)));
         } else {
             btn.setBorderPainted(false);
             btn.setBorder(new EmptyBorder(4, 10, 4, 10));
@@ -694,7 +737,7 @@ public class OperatorView extends JFrame {
     // Navigation / shared
     public void addLogoutListener(Runnable r) { logoutBtn.addActionListener(e -> r.run()); }
     public void showTab(int index)            { SwingUtilities.invokeLater(() -> applyStepStyle(index)); }
-    public void showError(String msg)         { JOptionPane.showMessageDialog(this, msg, "Error",     JOptionPane.ERROR_MESSAGE); }
-    public void showSuccess(String msg)       { JOptionPane.showMessageDialog(this, msg, "Éxito",     JOptionPane.INFORMATION_MESSAGE); }
+    public void showError(String msg)         { JOptionPane.showMessageDialog(this, msg, "Error",  JOptionPane.ERROR_MESSAGE); }
+    public void showSuccess(String msg)       { JOptionPane.showMessageDialog(this, msg, "Éxito",  JOptionPane.INFORMATION_MESSAGE); }
     public boolean confirm(String msg)        { return JOptionPane.showConfirmDialog(this, msg, "Confirmar", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION; }
 }
