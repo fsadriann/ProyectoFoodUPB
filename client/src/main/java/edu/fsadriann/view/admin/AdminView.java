@@ -32,6 +32,13 @@ public class AdminView extends JFrame {
     private static final String SEC_AUDIT    = "audit";
 
     private DefaultTableModel auditTableModel;
+    private JLabel metricPedidos       = new JLabel("—");
+    private JLabel metricCocina        = new JLabel("—");
+    private JLabel metricEntregas      = new JLabel("—");
+    private JLabel metricPedidosHoy    = new JLabel("—");
+    private JLabel metricIngresosHoy   = new JLabel("—");
+    private JLabel metricClientesNuevos = new JLabel("—");
+    private DefaultTableModel reportsTableModel;
     private JPanel cuadsGrid;
     private JButton addCuadBtn;
     private JButton connectCuadBtn;
@@ -167,9 +174,9 @@ public class AdminView extends JFrame {
         usersCard.add(totalUsersValue);
         usersCard.add(Box.createVerticalGlue());
         panel.add(usersCard);
-        panel.add(metricTile("Pedidos",  "—"));
-        panel.add(metricTile("Cocina",   "—"));
-        panel.add(metricTile("Entregas", "—"));
+        panel.add(metricTileDynamic("Pedidos",  metricPedidos));
+        panel.add(metricTileDynamic("Cocina",   metricCocina));
+        panel.add(metricTileDynamic("Entregas", metricEntregas));
         return panel;
     }
 
@@ -189,21 +196,68 @@ public class AdminView extends JFrame {
         JPanel card = card();
         card.setLayout(new BorderLayout(0, 14));
         card.setBorder(new EmptyBorder(16, 18, 16, 18));
+
+        // Fila superior — métricas globales (reutiliza el summary ya existente)
+        // Fila secundaria — métricas del día
         JPanel metrics = new JPanel(new GridLayout(1, 4, 10, 0));
         metrics.setOpaque(false);
-        metrics.add(metricTile("Pedidos hoy",     "—"));
-        metrics.add(metricTile("Ingresos hoy",    "—"));
-        metrics.add(metricTile("Clientes nuevos", "—"));
-        metrics.add(metricTile("Tiempo prom.",    "—"));
-        String[] cols = {"Operador", "Pedidos", "Clientes atendidos", "Tiempo prom.", "Estado"};
-        DefaultTableModel rm = new DefaultTableModel(cols, 0) {
+
+        metrics.add(metricTileDynamic("Pedidos hoy",     metricPedidosHoy));
+        metrics.add(metricTileDynamic("Ingresos hoy",    metricIngresosHoy));
+        metrics.add(metricTileDynamic("Clientes nuevos", metricClientesNuevos));
+        metrics.add(metricTile("Tiempo prom.", "—"));
+
+        // Tabla de pedidos
+        String[] cols = {"Estado", "Cantidad", "Ingresos", "% del total"};
+        reportsTableModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
-        JScrollPane rs = new JScrollPane(styledTable(rm));
+        JScrollPane rs = new JScrollPane(styledTable(reportsTableModel));
         rs.setBorder(new MatteBorder(1, 0, 0, 0, BORDER_C));
-        card.add(metrics, BorderLayout.NORTH);
-        card.add(rs,      BorderLayout.CENTER);
+
+        // Botón actualizar
+        JButton refreshBtn = new JButton("↻ Actualizar");
+        styleBtn(refreshBtn, new Color(100, 100, 100), Color.WHITE);
+        refreshBtn.setName("refreshReports");
+
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
+        JLabel t = new JLabel("Resumen de pedidos");
+        t.setFont(new Font("SansSerif", Font.BOLD, 16));
+        t.setForeground(TEXT);
+        header.add(t,          BorderLayout.WEST);
+        header.add(refreshBtn, BorderLayout.EAST);
+
+        JPanel top = new JPanel(new BorderLayout(0, 10));
+        top.setOpaque(false);
+        top.add(header,  BorderLayout.NORTH);
+        top.add(metrics, BorderLayout.SOUTH);
+
+        card.add(top, BorderLayout.NORTH);
+        card.add(rs,  BorderLayout.CENTER);
         return card;
+    }
+
+    private JLabel metricValue() {
+        JLabel lbl = new JLabel("—");
+        lbl.setFont(new Font("SansSerif", Font.BOLD, 22));
+        lbl.setForeground(TEXT);
+        return lbl;
+    }
+
+    private JPanel metricTileDynamic(String label, JLabel valueLabel) {
+        JPanel p = new JPanel();
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+        p.setBackground(BG);
+        p.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(BORDER_C), new EmptyBorder(10, 12, 10, 12)));
+        JLabel lbl = new JLabel(label);
+        lbl.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        lbl.setForeground(TEXT2);
+        p.add(lbl);
+        p.add(Box.createVerticalStrut(4));
+        p.add(valueLabel);
+        return p;
     }
 
     // ── USUARIOS — con botones Editar y Eliminar ──────────────────────────────
@@ -628,6 +682,89 @@ public class AdminView extends JFrame {
 
     public void addRefreshAuditListener(Runnable action) {
         findRefreshAuditBtn(sectionCards, action);
+    }
+
+
+    public void addRefreshReportsListener(Runnable action) {
+        findButtonByName(sectionCards, "refreshReports", action);
+    }
+
+    private void findButtonByName(java.awt.Container container, String name, Runnable action) {
+        for (java.awt.Component c : container.getComponents()) {
+            if (c instanceof JButton && name.equals(c.getName())) {
+                ((JButton) c).addActionListener(e -> action.run());
+                return;
+            }
+            if (c instanceof java.awt.Container) {
+                findButtonByName((java.awt.Container) c, name, action);
+            }
+        }
+    }
+
+    public void setReporteMetricas(int pedidosHoy, double ingresosHoy, int clientesNuevos) {
+        SwingUtilities.invokeLater(() -> {
+            metricPedidosHoy.setText(String.valueOf(pedidosHoy));
+            metricIngresosHoy.setText("$" + String.format("%,.0f", ingresosHoy));
+            metricClientesNuevos.setText(String.valueOf(clientesNuevos));
+        });
+    }
+
+    public void setReportePedidos(LinkedList<edu.fsadriann.server.model.order.Order> pedidos) {
+        SwingUtilities.invokeLater(() -> {
+            reportsTableModel.setRowCount(0);
+            if (pedidos == null) return;
+
+            // contadores por estado
+            int pendiente = 0, enPrep = 0, listo = 0, enCamino = 0, entregado = 0, cancelado = 0;
+            double ingPendiente = 0, ingEnPrep = 0, ingListo = 0, ingEntregado = 0;
+            int total = 0;
+
+            edu.fsadriann.model.iterator.Iterator<edu.fsadriann.server.model.order.Order> it = pedidos.iterator();
+            while (it.hasNext()) {
+                edu.fsadriann.server.model.order.Order o = it.next();
+                if (o == null) continue;
+                total++;
+                switch (o.getEstado()) {
+                    case PENDIENTE      -> { pendiente++;  ingPendiente  += o.getTotal(); }
+                    case EN_PREPARACION -> { enPrep++;     ingEnPrep     += o.getTotal(); }
+                    case LISTO          -> { listo++;      ingListo      += o.getTotal(); }
+                    case EN_CAMINO      -> enCamino++;
+                    case ENTREGADO      -> { entregado++;  ingEntregado  += o.getTotal(); }
+                    case CANCELADO      -> cancelado++;
+                }
+            }
+
+            if (total == 0) return;
+
+            reportsTableModel.addRow(row("PENDIENTE",       pendiente,  ingPendiente,  total));
+            reportsTableModel.addRow(row("EN_PREPARACION",  enPrep,     ingEnPrep,     total));
+            reportsTableModel.addRow(row("LISTO",           listo,      ingListo,      total));
+            reportsTableModel.addRow(row("EN_CAMINO",       enCamino,   0,             total));
+            reportsTableModel.addRow(row("ENTREGADO",       entregado,  ingEntregado,  total));
+            reportsTableModel.addRow(row("CANCELADO",       cancelado,  0,             total));
+        });
+    }
+
+    private Object[] row(String estado, int cantidad, double ingresos, int total) {
+        double pct = total > 0 ? (cantidad * 100.0 / total) : 0;
+        return new Object[]{
+                estado,
+                cantidad,
+                ingresos > 0 ? "$" + String.format("%,.0f", ingresos) : "—",
+                String.format("%.1f%%", pct)
+        };
+    }
+
+    public void setMetricPedidos(int n) {
+        SwingUtilities.invokeLater(() -> { if (metricPedidos != null) metricPedidos.setText(String.valueOf(n)); });
+    }
+
+    public void setMetricCocina(int n) {
+        SwingUtilities.invokeLater(() -> { if (metricCocina != null) metricCocina.setText(String.valueOf(n)); });
+    }
+
+    public void setMetricEntregas(int n) {
+        SwingUtilities.invokeLater(() -> { if (metricEntregas != null) metricEntregas.setText(String.valueOf(n)); });
     }
 
     private void findRefreshAuditBtn(java.awt.Container container, Runnable action) {

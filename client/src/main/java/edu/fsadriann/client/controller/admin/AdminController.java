@@ -3,6 +3,7 @@ package edu.fsadriann.client.controller.admin;
 import edu.fsadriann.app.linkedlist.singly.singly.LinkedList;
 import edu.fsadriann.client.model.ClientModel;
 import edu.fsadriann.server.model.cuadrante.Cuadrante;
+import edu.fsadriann.server.model.order.Order;
 import edu.fsadriann.server.model.user.Rol;
 import edu.fsadriann.server.model.user.User;
 import edu.fsadriann.view.admin.AdminUserFormData;
@@ -22,6 +23,7 @@ public class AdminController {
 
     public void init() {
         if (!initialized) {
+            view.addRefreshReportsListener(this::refreshReportes);
             view.addRefreshAuditListener(this::refreshBitacora);
             view.addOpenCuadFormListener(() -> view.showCuadForm(null, this::handleCreateCuadrante));
             view.addConnectCuadListener(() -> view.showConnectCuadForm(this::handleConnectCuadrantes));
@@ -35,6 +37,7 @@ public class AdminController {
         }
         if (model.isConnected()) {
             refreshBitacora();
+            refreshReportes();
             refreshCuadrantes();
             refreshUsers();
             refreshProducts();
@@ -43,6 +46,29 @@ public class AdminController {
     }
 
     // ── Crear ─────────────────────────────────────────────────────────────────
+
+    private void refreshReportes() {
+        LinkedList<Order> pedidos = model.getPedidosTodos();
+        view.setReportePedidos(pedidos);
+
+        // calcular métricas
+        int total = 0, enCocina = 0, entregados = 0;
+        double ingresos = 0;
+        edu.fsadriann.model.iterator.Iterator<Order> it = pedidos.iterator();
+        while (it.hasNext()) {
+            Order o = it.next();
+            if (o == null) continue;
+            total++;
+            if (o.getEstado() == edu.fsadriann.server.model.order.EstadoPedido.EN_PREPARACION) enCocina++;
+            if (o.getEstado() == edu.fsadriann.server.model.order.EstadoPedido.ENTREGADO) entregados++;
+            if (o.getTotal() > 0) ingresos += o.getTotal();
+        }
+
+        view.setMetricPedidos(total);
+        view.setMetricCocina(enCocina);
+        view.setMetricEntregas(entregados);
+        view.setReporteMetricas(total, ingresos, model.getTotalUsuarios());
+    }
 
     private void refreshBitacora() {
         LinkedList<String> eventos = model.verBitacora();
