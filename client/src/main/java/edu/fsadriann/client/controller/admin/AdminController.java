@@ -177,7 +177,9 @@ public class AdminController {
         view.setReportePedidos(pedidos);
 
         int total = 0, enCocina = 0, entregados = 0;
+        int complejosCount = 0, rapidosCount = 0;
         double ingresos = 0;
+
         edu.fsadriann.model.iterator.Iterator<Order> it = pedidos.iterator();
         while (it.hasNext()) {
             Order o = it.next();
@@ -186,12 +188,33 @@ public class AdminController {
             if (o.getEstado() == edu.fsadriann.server.model.order.EstadoPedido.EN_PREPARACION) enCocina++;
             if (o.getEstado() == edu.fsadriann.server.model.order.EstadoPedido.ENTREGADO)      entregados++;
             if (o.getTotal() > 0) ingresos += o.getTotal();
+
+            // Clasificar por tipo de productos en el carrito
+            if (o.getCarrito() != null) {
+                edu.fsadriann.model.iterator.Iterator<edu.fsadriann.server.model.product.Product> ip =
+                        o.getCarrito().iterator();
+                boolean tieneComplejo = false;
+                while (ip.hasNext()) {
+                    edu.fsadriann.server.model.product.Product p = ip.next();
+                    if (p != null && p.isComplejo()) { tieneComplejo = true; break; }
+                }
+                if (tieneComplejo) complejosCount++;
+                else rapidosCount++;
+            }
+        }
+
+        // Estimado: complejo = 15 min, rápido = 8 min
+        String tiempoProm = "—";
+        if (total > 0) {
+            double promedio = (complejosCount * 15.0 + rapidosCount * 8.0) / total;
+            tiempoProm = String.format("%.0f min", promedio);
         }
 
         view.setMetricPedidos(total);
         view.setMetricCocina(enCocina);
         view.setMetricEntregas(entregados);
         view.setReporteMetricas(total, ingresos, model.getTotalUsuarios());
+        view.setMetricTiempoProm(tiempoProm);
     }
 
     private void refreshBitacora() {

@@ -38,6 +38,7 @@ public class AdminView extends JFrame {
     private JLabel metricPedidosHoy     = new JLabel("—");
     private JLabel metricIngresosHoy    = new JLabel("—");
     private JLabel metricClientesNuevos = new JLabel("—");
+    private JLabel metricTiempoProm = new JLabel("—");
     private DefaultTableModel reportsTableModel;
     private JPanel cuadsGrid;
     private JButton addCuadBtn;
@@ -207,7 +208,7 @@ public class AdminView extends JFrame {
         metrics.add(metricTileDynamic("Pedidos hoy",     metricPedidosHoy));
         metrics.add(metricTileDynamic("Ingresos hoy",    metricIngresosHoy));
         metrics.add(metricTileDynamic("Clientes nuevos", metricClientesNuevos));
-        metrics.add(metricTile("Tiempo prom.", "—"));
+        metrics.add(metricTileDynamic("Tiempo prom.", metricTiempoProm));
 
         String[] cols = {"Estado", "Cantidad", "Ingresos", "% del total"};
         reportsTableModel = new DefaultTableModel(cols, 0) {
@@ -1107,6 +1108,9 @@ public class AdminView extends JFrame {
     public void setMetricEntregas(int n) { SwingUtilities.invokeLater(() -> metricEntregas.setText(String.valueOf(n))); }
     public void setTotalUsers(int n)     { SwingUtilities.invokeLater(() -> { if (totalUsersValue != null) totalUsersValue.setText(String.valueOf(n)); }); }
     public void setMessage(String msg)   { SwingUtilities.invokeLater(() -> statusLabel.setText(msg)); }
+    public void setMetricTiempoProm(String v) {
+        SwingUtilities.invokeLater(() -> metricTiempoProm.setText(v));
+    }
 
     // ── Getters de selección ──────────────────────────────────────────────────
 

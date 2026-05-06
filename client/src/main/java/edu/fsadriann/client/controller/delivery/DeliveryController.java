@@ -97,6 +97,10 @@ public class DeliveryController {
         int listos = 0, enTransito = 0, entregados = 0, pendientes = 0;
         Map<String, Integer> pedidosPorCuadrante = new HashMap<>();
 
+        // Agrupar pedidos por repartidor
+        Map<String, java.util.List<Order>> gruposPorRepartidor = new java.util.LinkedHashMap<>();
+        java.util.List<Order> sinRepartidor = new java.util.ArrayList<>();
+
         edu.fsadriann.model.iterator.Iterator<Order> it = todos.iterator();
         while (it.hasNext()) {
             Order o = it.next();
@@ -105,62 +109,101 @@ public class DeliveryController {
             switch (o.getEstado()) {
                 case LISTO: {
                     listos++;
-                    String cuad       = o.getCuadranteDestino();
-                    String cliente    = o.getCedulaCliente() != null ? o.getCedulaCliente() : "—";
-                    boolean tieneCuad = cuad != null && !cuad.isBlank() && !cuad.equals("—");
-                    String cuadDisplay = tieneCuad ? cuad : "Sin cuadrante";
-
                     Delivery delivery = model.buscarEntregaPorPedido(o.getOrderId());
                     boolean asignado  = delivery != null
                             && delivery.getRepartidorId() != null
                             && !delivery.getRepartidorId().isBlank();
 
-                    view.addOrderCard(
-                            o.getOrderId(), cliente, cuadDisplay, EstadoPedido.LISTO,
-                            asignado ? delivery.getRepartidorId() : null,
-                            // Botón "Asignar repartidor" — solo si no tiene repartidor
-                            asignado ? null : () -> handleAsignarRepartidor(o.getOrderId()),
-                            // Botón "Iniciar entrega" — solo si tiene repartidor Y hay ruta
-                            asignado ? () -> handleIniciarEntrega(o.getOrderId()) : null
-                    );
+                    if (asignado) {
+                        gruposPorRepartidor
+                                .computeIfAbsent(delivery.getRepartidorId(),
+                                        k -> new java.util.ArrayList<>())
+                                .add(o);
+                    } else {
+                        sinRepartidor.add(o);
+                    }
 
-                    if (tieneCuad) pedidosPorCuadrante.merge(cuad, 1, Integer::sum);
+                    String cuad = o.getCuadranteDestino();
+                    if (cuad != null && !cuad.isBlank() && !cuad.equals("—"))
+                        pedidosPorCuadrante.merge(cuad, 1, Integer::sum);
                     break;
                 }
                 case EN_CAMINO: {
                     enTransito++;
-                    String cuad       = o.getCuadranteDestino();
-                    String cliente    = o.getCedulaCliente() != null ? o.getCedulaCliente() : "—";
-                    boolean tieneCuad = cuad != null && !cuad.isBlank() && !cuad.equals("—");
-                    String cuadDisplay = tieneCuad ? cuad : "Sin cuadrante";
-
                     Delivery delivery = model.buscarEntregaPorPedido(o.getOrderId());
+                    boolean asignado  = delivery != null
+                            && delivery.getRepartidorId() != null
+                            && !delivery.getRepartidorId().isBlank();
 
-                    view.addOrderCard(
-                            o.getOrderId(), cliente, cuadDisplay, EstadoPedido.EN_CAMINO,
-                            delivery != null ? delivery.getRepartidorId() : null,
-                            null,
-                            () -> handleCompletarEntrega(o.getOrderId())
-                    );
+                    if (asignado) {
+                        gruposPorRepartidor
+                                .computeIfAbsent(delivery.getRepartidorId(),
+                                        k -> new java.util.ArrayList<>())
+                                .add(o);
+                    } else {
+                        sinRepartidor.add(o);
+                    }
 
-                    if (tieneCuad) pedidosPorCuadrante.merge(cuad, 1, Integer::sum);
+                    String cuad = o.getCuadranteDestino();
+                    if (cuad != null && !cuad.isBlank() && !cuad.equals("—"))
+                        pedidosPorCuadrante.merge(cuad, 1, Integer::sum);
                     break;
                 }
-                case ENTREGADO:
-                    entregados++;
-                    break;
+                case ENTREGADO:  entregados++; break;
                 case PENDIENTE:
-                case EN_PREPARACION:
-                    pendientes++;
-                    break;
-                default:
-                    break;
+                case EN_PREPARACION: pendientes++; break;
+                default: break;
             }
         }
 
-        for (Map.Entry<String, Integer> entry : pedidosPorCuadrante.entrySet()) {
-            view.setCuadranteConPedidos(entry.getKey(), entry.getValue());
+        // Mostrar pedidos sin repartidor individualmente
+        for (Order o : sinRepartidor) {
+            String cuad      = o.getCuadranteDestino();
+            String cliente   = o.getCedulaCliente() != null ? o.getCedulaCliente() : "—";
+            String cuadDisplay = (cuad != null && !cuad.isBlank() && !cuad.equals("—"))
+                    ? cuad : "Sin cuadrante";
+            view.addOrderCard(
+                    o.getOrderId(), cliente, cuadDisplay, EstadoPedido.LISTO,
+                    null,
+                    () -> handleAsignarRepartidor(o.getOrderId()),
+                    null
+            );
         }
+
+        // Mostrar grupos por repartidor
+        for (Map.Entry<String, java.util.List<Order>> entry : gruposPorRepartidor.entrySet()) {
+            String rep = entry.getKey();
+            java.util.List<Order> grupo = entry.getValue();
+
+            java.util.List<String> ids      = new java.util.ArrayList<>();
+            java.util.List<String> clientes = new java.util.ArrayList<>();
+            java.util.List<String> cuads    = new java.util.ArrayList<>();
+            java.util.List<Runnable> acciones = new java.util.ArrayList<>();
+
+            EstadoPedido estadoGrupo = grupo.get(0).getEstado();
+
+            for (Order o : grupo) {
+                ids.add(o.getOrderId());
+                clientes.add(o.getCedulaCliente() != null ? o.getCedulaCliente() : "—");
+                String cuad = o.getCuadranteDestino();
+                cuads.add((cuad != null && !cuad.isBlank() && !cuad.equals("—"))
+                        ? cuad : "Sin cuadrante");
+                acciones.add(() -> handleCompletarEntrega(o.getOrderId()));
+            }
+
+            view.addGroupCard(
+                    rep, ids, clientes, cuads, estadoGrupo,
+                    // Iniciar todas
+                    estadoGrupo == EstadoPedido.LISTO
+                            ? () -> handleIniciarGrupo(grupo)
+                            : null,
+                    // Entregar individualmente
+                    estadoGrupo == EstadoPedido.EN_CAMINO ? acciones : null
+            );
+        }
+
+        for (Map.Entry<String, Integer> entry : pedidosPorCuadrante.entrySet())
+            view.setCuadranteConPedidos(entry.getKey(), entry.getValue());
 
         view.setMetrics(listos, enTransito, entregados, pendientes);
         view.setMessage("Listos: " + listos + "  |  En tránsito: " + enTransito
@@ -168,6 +211,24 @@ public class DeliveryController {
     }
 
     // ── Handlers de acciones ──────────────────────────────────────────────────
+
+    private void handleIniciarGrupo(java.util.List<Order> grupo) {
+        if (!rutaCalculada) {
+            view.showError("Debes calcular la ruta óptima antes de iniciar la entrega.\n"
+                    + "Presiona el botón \"Calcular ruta óptima\".");
+            return;
+        }
+
+        if (!view.confirm("¿Iniciar entrega de " + grupo.size() + " pedido(s) a la vez?")) return;
+
+        int iniciados = 0;
+        for (Order o : grupo) {
+            if (model.iniciarEntrega(o.getOrderId())) iniciados++;
+        }
+
+        view.setMessage(iniciados + " pedido(s) iniciados en camino.");
+        refreshOrders();
+    }
 
     private void handleAsignarRepartidor(String orderId) {
         String repartidor = view.promptRepartidor();
@@ -230,21 +291,47 @@ public class DeliveryController {
     // ── Ruta ──────────────────────────────────────────────────────────────────
 
     private void handleCalcularRuta() {
-        List<String> destinos = getDestinosConPedidos();
+        // Agrupar destinos por repartidor
+        Map<String, java.util.List<String>> destinosPorRepartidor = new java.util.LinkedHashMap<>();
+        java.util.List<String> destinosSinRepartidor = new java.util.ArrayList<>();
 
-        if (destinos.isEmpty()) {
-            int sinCuadrante = contarPedidosSinCuadrante();
-            if (sinCuadrante > 0) {
-                view.showError(sinCuadrante + " pedido(s) no tienen cuadrante asignado.\n"
-                        + "El operador debe asignarlo al generar la factura.");
-            } else {
-                view.showError("No hay pedidos LISTO o EN_CAMINO para calcular ruta.");
+        LinkedList<Order> todos = model.getPedidosTodos();
+        if (todos != null) {
+            edu.fsadriann.model.iterator.Iterator<Order> it = todos.iterator();
+            while (it.hasNext()) {
+                Order o = it.next();
+                if (o == null) continue;
+                if (o.getEstado() != EstadoPedido.LISTO
+                        && o.getEstado() != EstadoPedido.EN_CAMINO) continue;
+                String cuad = o.getCuadranteDestino();
+                if (cuad == null || cuad.isBlank() || cuad.equals("—")) continue;
+
+                Delivery delivery = model.buscarEntregaPorPedido(o.getOrderId());
+                if (delivery != null && delivery.getRepartidorId() != null
+                        && !delivery.getRepartidorId().isBlank()) {
+                    destinosPorRepartidor
+                            .computeIfAbsent(delivery.getRepartidorId(),
+                                    k -> new java.util.ArrayList<>())
+                            .add(cuad);
+                } else {
+                    if (!destinosSinRepartidor.contains(cuad))
+                        destinosSinRepartidor.add(cuad);
+                }
             }
+        }
+
+        if (destinosPorRepartidor.isEmpty() && destinosSinRepartidor.isEmpty()) {
+            view.showError("No hay pedidos con cuadrante asignado para calcular ruta.");
             rutaCalculada = false;
             return;
         }
 
-        List<String> rutaOrdenada = calcularRutaGreedy(ORIGEN, destinos);
+        // Calcular ruta combinada para mostrar en el grafo
+        java.util.List<String> todosDestinos = new java.util.ArrayList<>(destinosSinRepartidor);
+        for (java.util.List<String> cuads : destinosPorRepartidor.values())
+            for (String c : cuads) if (!todosDestinos.contains(c)) todosDestinos.add(c);
+
+        java.util.List<String> rutaOrdenada = calcularRutaGreedy(ORIGEN, todosDestinos);
         LinkedList<String> rutaCompleta = new LinkedList<>();
         double distanciaTotal = 0;
         String actual = ORIGEN;
@@ -253,10 +340,7 @@ public class DeliveryController {
         for (String destino : rutaOrdenada) {
             LinkedList<String> tramo     = model.calcularRutaMasCorta(actual, destino);
             double             distTramo = model.calcularDistanciaCuadrantes(actual, destino);
-            if (tramo == null || distTramo < 0) {
-                view.setMessage("No existe ruta hacia " + destino + ".");
-                continue;
-            }
+            if (tramo == null || distTramo < 0) continue;
             edu.fsadriann.model.iterator.Iterator<String> itT = tramo.iterator();
             boolean primero = true;
             while (itT.hasNext()) {
@@ -269,12 +353,18 @@ public class DeliveryController {
         }
 
         view.setRuta(rutaCompleta, distanciaTotal);
-        rutaCalculada = true; // ← habilita el botón "Iniciar entrega"
-        view.setMessage(String.format(
-                "Ruta calculada: %d parada(s), %.2f km totales. Ya puedes iniciar entregas.",
-                rutaOrdenada.size(), distanciaTotal));
-    }
+        rutaCalculada = true;
 
+        // Mensaje detallado por repartidor
+        StringBuilder msg = new StringBuilder("Ruta calculada. ");
+        for (Map.Entry<String, java.util.List<String>> entry : destinosPorRepartidor.entrySet()) {
+            msg.append(entry.getKey())
+                    .append(": ")
+                    .append(entry.getValue())
+                    .append("  ");
+        }
+        view.setMessage(msg.toString());
+    }
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private List<String> calcularRutaGreedy(String origen, List<String> destinos) {

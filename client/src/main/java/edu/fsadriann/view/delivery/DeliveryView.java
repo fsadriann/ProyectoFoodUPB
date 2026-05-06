@@ -176,6 +176,102 @@ public class DeliveryView extends JFrame {
         return scroll;
     }
 
+    public void addGroupCard(String repartidor, java.util.List<String> orderIds,
+                             java.util.List<String> clientes, java.util.List<String> cuadrantes,
+                             EstadoPedido estado, Runnable onIniciarTodas,
+                             java.util.List<Runnable> onEntregadoIndividual) {
+        SwingUtilities.invokeLater(() -> {
+            boolean enCamino = estado == EstadoPedido.EN_CAMINO;
+            Color bordeColor = enCamino ? BLUE : GREEN;
+
+            // Tarjeta contenedora del grupo
+            JPanel card = new JPanel();
+            card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+            card.setBackground(BG);
+            card.setAlignmentX(Component.LEFT_ALIGNMENT);
+            card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 999));
+            card.setBorder(BorderFactory.createCompoundBorder(
+                    new MatteBorder(0, 4, 0, 0, bordeColor),
+                    BorderFactory.createCompoundBorder(
+                            new LineBorder(BORDER_C),
+                            new EmptyBorder(10, 10, 10, 10))));
+
+            // Encabezado del grupo: repartidor
+            JLabel repLbl = new JLabel("Repartidor: " + repartidor);
+            repLbl.setFont(new Font("SansSerif", Font.BOLD, 12));
+            repLbl.setForeground(BLUE);
+            repLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+            card.add(repLbl);
+            card.add(Box.createVerticalStrut(6));
+
+            // Línea separadora
+            JPanel line = new JPanel();
+            line.setBackground(BORDER_C);
+            line.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+            line.setAlignmentX(Component.LEFT_ALIGNMENT);
+            card.add(line);
+            card.add(Box.createVerticalStrut(6));
+
+            // Un sub-item por cada pedido del grupo
+            for (int i = 0; i < orderIds.size(); i++) {
+                String orderId  = orderIds.get(i);
+                String cliente  = i < clientes.size()   ? clientes.get(i)   : "—";
+                String cuadrante= i < cuadrantes.size() ? cuadrantes.get(i) : "—";
+
+                JPanel item = new JPanel(new BorderLayout(6, 0));
+                item.setOpaque(false);
+                item.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
+                item.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+                JPanel itemLeft = new JPanel();
+                itemLeft.setLayout(new BoxLayout(itemLeft, BoxLayout.Y_AXIS));
+                itemLeft.setOpaque(false);
+
+                JLabel idLbl = new JLabel(shortId(orderId) + " — " + cliente);
+                idLbl.setFont(new Font("SansSerif", Font.PLAIN, 11));
+                idLbl.setForeground(TEXT);
+
+                JLabel cuadLbl = new JLabel("→ " + cuadrante);
+                cuadLbl.setFont(new Font("SansSerif", Font.PLAIN, 10));
+                cuadLbl.setForeground(TEXT2);
+
+                itemLeft.add(idLbl);
+                itemLeft.add(cuadLbl);
+                item.add(itemLeft, BorderLayout.CENTER);
+
+                // Botón individual "Entregado" solo si está en camino
+                if (enCamino && onEntregadoIndividual != null && i < onEntregadoIndividual.size()) {
+                    final Runnable accion = onEntregadoIndividual.get(i);
+                    JButton btnEnt = actionBtn("✓", BLUE, Color.WHITE);
+                    btnEnt.setMaximumSize(new Dimension(36, 28));
+                    btnEnt.setToolTipText("Marcar como entregado");
+                    btnEnt.addActionListener(e -> accion.run());
+                    item.add(btnEnt, BorderLayout.EAST);
+                }
+
+                card.add(item);
+                card.add(Box.createVerticalStrut(4));
+            }
+
+            card.add(Box.createVerticalStrut(6));
+
+            // Botón principal del grupo
+            if (!enCamino && onIniciarTodas != null) {
+                JButton btnIniciar = actionBtn(
+                        "Iniciar entrega (" + orderIds.size() + " pedidos)", GREEN, Color.WHITE);
+                btnIniciar.addActionListener(e -> onIniciarTodas.run());
+                card.add(btnIniciar);
+            }
+
+            card.add(Box.createVerticalStrut(4));
+
+            assignedOrdersBody.add(card);
+            assignedOrdersBody.add(Box.createVerticalStrut(10));
+            assignedOrdersBody.revalidate();
+            assignedOrdersBody.repaint();
+        });
+    }
+
     public void addOrderCard(String orderId, String clientName, String cuadrante,
                              EstadoPedido estado, String repartidor,
                              Runnable onAsignar, Runnable onAccion) {
