@@ -16,4 +16,7 @@ public interface KitchenInterface extends Remote {
     int tamanoCola() throws RemoteException;
 
     boolean colaVacia() throws RemoteException;
+
+    java.util.List<Order> procesarPedidosDisponibles() throws RemoteException;
+
 }

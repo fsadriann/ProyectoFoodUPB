@@ -109,18 +109,61 @@ public class OperatorController {
 		orderController.createOrderForClient(client);
 		loadFrequentOrders(client);
 
-		// FIX: 4 columnas — Nombres | Correo | Teléfono | Tipo
+		// Cargar cuadrantes en el selector
+		LinkedList<edu.fsadriann.server.model.cuadrante.Cuadrante> cuads = model.listarCuadrantes();
+		java.util.List<String> nombres = new java.util.ArrayList<>();
+		edu.fsadriann.model.iterator.Iterator<edu.fsadriann.server.model.cuadrante.Cuadrante> itC = cuads.iterator();
+		while (itC.hasNext()) {
+			edu.fsadriann.server.model.cuadrante.Cuadrante c = itC.next();
+			if (c != null && !"UPB".equals(c.getNombre())) nombres.add(c.getNombre());
+		}
+		view.setCuadrantesDisponibles(nombres.toArray(new String[0]));
+
+		// Detectar cuadrante por dirección
+		String direccion          = client.getDireccion();
+		String cuadranteDetectado = detectarCuadrante(direccion);
+		if (cuadranteDetectado != null) {
+			view.setSelectedCuadrante(cuadranteDetectado);
+		}
+
+		// FIX: 5 columnas — Nombres | Correo | Teléfono | Tipo | Cuadrante
+		// El cuadrante se pasa directamente para que la tarjeta del cliente lo muestre
 		DefaultTableModel clientTable = view.getClientTableModel();
 		clientTable.setRowCount(0);
 		clientTable.addRow(new Object[]{
 				client.getNombreCompleto().trim(),
 				client.getId(),
 				client.getTelefono(),
-				client.isPremium() ? "Premium" : "Estándar"
+				client.isPremium() ? "Premium" : "Estándar",
+				// FIX: si se detectó un cuadrante se muestra, si no se deja vacío
+				// para que el operador lo seleccione manualmente en el combo
+				cuadranteDetectado != null ? cuadranteDetectado : ""
 		});
 
 		view.showTab(1);
-		view.setMessage("Cliente cargado y pedido iniciado.");
+
+		// FIX: un solo mensaje de estado, unificado
+		String msgCuadrante = cuadranteDetectado != null
+				? "Cuadrante detectado: " + cuadranteDetectado + "."
+				: "Selecciona el cuadrante manualmente.";
+		view.setMessage("Cliente cargado y pedido iniciado. " + msgCuadrante);
+	}
+
+	private String detectarCuadrante(String direccion) {
+		if (direccion == null || direccion.isBlank()) return null;
+		String d = direccion.toLowerCase();
+
+		if (d.contains("floridablanca"))                    return "Floridablanca";
+		if (d.contains("girón") || d.contains("giron"))    return "Giron";
+		if (d.contains("piedecuesta"))                      return "Piedecuesta";
+		if (d.contains("lagos") || d.contains("cacique"))  return "Lagos";
+		if (d.contains("cabecera"))                         return "Cabecera";
+		if (d.contains("provenza"))                         return "Provenza";
+		if (d.contains("san francisco") || d.contains("sanfrancisco")) return "SanFrancisco";
+		if (d.contains("mejoras"))                          return "Mejoras";
+		if (d.contains("centro") || d.contains("bucaramanga")) return "Centro";
+
+		return null;
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────

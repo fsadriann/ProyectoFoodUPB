@@ -1,7 +1,6 @@
 package edu.fsadriann.client.controller.order;
 
 import edu.fsadriann.client.model.ClientModel;
-import edu.fsadriann.model.iterator.Iterator;
 import edu.fsadriann.server.model.order.EstadoPedido;
 import edu.fsadriann.server.model.order.Order;
 import edu.fsadriann.server.model.product.Product;
@@ -13,19 +12,6 @@ import javax.swing.table.DefaultTableModel;
 import java.text.NumberFormat;
 import java.util.Locale;
 
-/**
- * Controlador de pedidos para el flujo del operador.
- *
- * Responsabilidades:
- *  - Crear el pedido al identificar un cliente
- *  - Agregar / quitar / cambiar cantidad de productos en el pedido actual
- *  - Generar la factura (calcular totales y poblar el card de factura)
- *  - Enviar el pedido a cocina
- *  - Limpiar el pedido o la factura
- *
- * Nunca habla directamente con OrderService ni ProductService:
- * toda comunicación pasa por ClientModel (RMI encapsulado).
- */
 public class OrderController {
 
 	private static final double IVA            = 0.19;
@@ -36,7 +22,6 @@ public class OrderController {
 	private final ClientModel  model;
 	private final OperatorView view;
 
-	// Cache local de productos mostrados en currentOrderTable (para quitar/editar)
 	private java.util.List<Product> currentOrderProducts = new java.util.ArrayList<>();
 
 	public OrderController(ClientModel model, OperatorView view) {
@@ -44,9 +29,7 @@ public class OrderController {
 		this.view  = view;
 	}
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// CREAR PEDIDO
-	// ─────────────────────────────────────────────────────────────────────────
+	// ── Crear pedido ──────────────────────────────────────────────────────────
 
 	public void createOrderForClient(User client) {
 		if (client == null) {
@@ -76,14 +59,8 @@ public class OrderController {
 		view.showTab(1);
 	}
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// AGREGAR PRODUCTO
-	// ─────────────────────────────────────────────────────────────────────────
+	// ── Agregar producto ──────────────────────────────────────────────────────
 
-	/**
-	 * Agrega un producto al pedido actual y actualiza la tabla currentOrder.
-	 * Si el producto ya está en el carrito, incrementa su cantidad.
-	 */
 	public void addProduct(Product product) {
 		if (product == null) {
 			view.setMessage("Selecciona un producto válido.");
@@ -103,13 +80,11 @@ public class OrderController {
 		int existingIndex = findProductInCurrentOrder(product.getProductoId());
 
 		if (existingIndex >= 0) {
-			// Ya existe: incrementar cantidad en el cache local y en la tabla
 			Product existing = currentOrderProducts.get(existingIndex);
 			existing.setCantidad(existing.getCantidad() + 1);
 
 			DefaultTableModel tableModel = view.getCurrentOrderModel();
 			tableModel.setValueAt(existing.getCantidad(), existingIndex, 1);
-			// FIX: actualizar la columna "Subtotal" (col 3) de la fila
 			tableModel.setValueAt(
 					"$" + COP.format((long) existing.getPrecio() * existing.getCantidad()),
 					existingIndex, 3);
@@ -124,7 +99,6 @@ public class OrderController {
 			}
 			currentOrderProducts.add(toAdd);
 
-			// FIX: cuatro columnas: Producto | Cant. | Precio unit. | Subtotal
 			view.getCurrentOrderModel().addRow(new Object[]{
 					toAdd.getNombre(),
 					toAdd.getCantidad(),
@@ -133,12 +107,12 @@ public class OrderController {
 			});
 		}
 
+		// FIX 2: actualizar total en tiempo real
+		refreshOrderTotal();
 		view.setMessage("«" + product.getNombre() + "» agregado al pedido.");
 	}
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// QUITAR PRODUCTO
-	// ─────────────────────────────────────────────────────────────────────────
+	// ── Quitar producto ───────────────────────────────────────────────────────
 
 	public void removeSelectedProduct() {
 		int row = view.getSelectedCurrentOrderRow();
@@ -159,15 +133,15 @@ public class OrderController {
 		if (removed) {
 			currentOrderProducts.remove(row);
 			view.getCurrentOrderModel().removeRow(row);
+			view.clearOrderSelection(); // FIX 3: limpiar selección guardada
+			refreshOrderTotal();        // FIX 2: actualizar total
 			view.setMessage("«" + toRemove.getNombre() + "» eliminado del pedido.");
 		} else {
 			view.showError("No se pudo eliminar el producto. Verifica el estado del pedido.");
 		}
 	}
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// CAMBIAR CANTIDAD
-	// ─────────────────────────────────────────────────────────────────────────
+	// ── Cambiar cantidad ──────────────────────────────────────────────────────
 
 	public void changeSelectedProductQuantity() {
 		int row = view.getSelectedCurrentOrderRow();
@@ -207,41 +181,26 @@ public class OrderController {
 			return;
 		}
 
-		boolean removed = model.quitarProductoAPedido(order.getOrderId(), product);
-		if (!removed) {
+		// FIX: un solo llamado al servidor — modifica directo en el carrito
+		boolean ok = model.cambiarCantidadProducto(
+				order.getOrderId(), product.getProductoId(), cantidad);
+
+		if (!ok) {
 			view.showError("No se pudo actualizar la cantidad.");
 			return;
 		}
 
 		product.setCantidad(cantidad);
-		boolean added = model.agregarProductoAPedido(order.getOrderId(), product);
-		if (!added) {
-			view.showError("No se pudo re-agregar el producto con la nueva cantidad.");
-			return;
-		}
 
-		// FIX: actualizar las 4 columnas (cant. y subtotal)
 		DefaultTableModel tableModel = view.getCurrentOrderModel();
 		tableModel.setValueAt(cantidad, row, 1);
-		tableModel.setValueAt(
-				"$" + COP.format((long) product.getPrecio() * cantidad), row, 3);
+		tableModel.setValueAt("$" + COP.format((long) product.getPrecio() * cantidad), row, 3);
 
+		refreshOrderTotal();
 		view.setMessage("Cantidad actualizada a " + cantidad + " para «" + product.getNombre() + "».");
 	}
+	// ── Generar factura ───────────────────────────────────────────────────────
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// GENERAR FACTURA
-	// ─────────────────────────────────────────────────────────────────────────
-
-	/**
-	 * Calcula la factura del pedido actual y puebla el card de factura en la vista.
-	 *
-	 * FIX: los totales (subtotal, IVA, domicilio) se calculan localmente desde
-	 * el cache de currentOrderProducts, porque el objeto Order que vuelve por RMI
-	 * es una nueva instancia deserializada que no propaga los setters al cliente.
-	 * El total devuelto por model.calcularFactura() sí viaja correctamente y sirve
-	 * de verificación cruzada.
-	 */
 	public void generateInvoice() {
 		Order order = model.getCurrentOrder();
 		if (order == null) {
@@ -253,20 +212,28 @@ public class OrderController {
 			return;
 		}
 
-		// Llamar al servidor (persiste los totales y devuelve el total final)
+		String cuadranteSeleccionado = view.getSelectedCuadrante();
+		if (cuadranteSeleccionado == null || cuadranteSeleccionado.isBlank()) {
+			view.showError("Selecciona el cuadrante de destino antes de generar la factura.");
+			return;
+		}
+		order.setCuadranteDestino(cuadranteSeleccionado);
+		boolean cuadAsignado = model.asignarCuadranteDestino(order.getOrderId(), cuadranteSeleccionado);
+		if (!cuadAsignado) {
+			view.showError("No se pudo asignar el cuadrante al pedido en el servidor.");
+			return;
+		}
+
 		double serverTotal = model.calcularFactura(order);
 
-		// ── Calcular localmente para poblar la vista sin depender del objeto RMI ──
 		double subtotal = 0.0;
 		for (Product p : currentOrderProducts) {
 			subtotal += (double) p.getPrecio() * p.getCantidad();
 		}
-		double iva  = subtotal * IVA;
-		double domi = order.isPremium() ? 0.0 : COSTO_DOMI_STD;
-		// Si el servidor retornó un total válido, usarlo; si no, usar el local
+		double iva   = subtotal * IVA;
+		double domi  = order.isPremium() ? 0.0 : COSTO_DOMI_STD;
 		double total = serverTotal > 0 ? serverTotal : (subtotal + iva + domi);
 
-		// ── Datos del cliente ──
 		User client = model.getCurrentClient();
 		if (client != null) {
 			view.setInvoiceClient(client.getNombreCompleto().trim());
@@ -274,16 +241,12 @@ public class OrderController {
 			view.setInvoiceDireccion(client.getDireccion() != null ? client.getDireccion() : "—");
 		}
 
-		view.setInvoiceCuadrante(
-				order.getCuadranteDestino() != null ? order.getCuadranteDestino() : "—");
-
-		// ── Totales formateados ──
+		view.setInvoiceCuadrante(cuadranteSeleccionado);
 		view.setInvoiceSubtotal("$" + COP.format(Math.round(subtotal)));
 		view.setInvoiceIva("$"       + COP.format(Math.round(iva)));
 		view.setInvoiceDomicilio("$" + COP.format(Math.round(domi)));
 		view.setInvoiceTotal("$"     + COP.format(Math.round(total)));
 
-		// ── Tabla de ítems de la factura ──
 		DefaultTableModel invoiceModel = view.getInvoiceOrderModel();
 		invoiceModel.setRowCount(0);
 		for (Product p : currentOrderProducts) {
@@ -296,12 +259,11 @@ public class OrderController {
 		}
 
 		view.showTab(2);
-		view.setMessage("Factura generada. Total: $" + COP.format(Math.round(total)));
+		view.setMessage("Factura generada para " + cuadranteSeleccionado
+				+ ". Total: $" + COP.format(Math.round(total)));
 	}
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// ENVIAR A COCINA
-	// ─────────────────────────────────────────────────────────────────────────
+	// ── Enviar a cocina ───────────────────────────────────────────────────────
 
 	public void sendToKitchen() {
 		Order order = model.getCurrentOrder();
@@ -333,9 +295,7 @@ public class OrderController {
 		}
 	}
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// LIMPIAR PEDIDO / FACTURA
-	// ─────────────────────────────────────────────────────────────────────────
+	// ── Limpiar pedido / factura ──────────────────────────────────────────────
 
 	public void clearOrder() {
 		Order order = model.getCurrentOrder();
@@ -369,13 +329,29 @@ public class OrderController {
 		view.setMessage("Factura limpiada.");
 	}
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// HELPERS PRIVADOS
-	// ─────────────────────────────────────────────────────────────────────────
+	// ── Helpers privados ──────────────────────────────────────────────────────
+
+	// FIX 2: recalcula y muestra el total del pedido en tiempo real
+	private void refreshOrderTotal() {
+		double subtotal = 0.0;
+		for (Product p : currentOrderProducts) {
+			subtotal += (double) p.getPrecio() * p.getCantidad();
+		}
+		Order order = model.getCurrentOrder();
+		boolean isPremium = order != null && order.isPremium();
+		double iva   = subtotal * IVA;
+		double domi  = isPremium ? 0.0 : COSTO_DOMI_STD;
+		double total = subtotal + iva + domi;
+		view.setOrderTotal("$" + COP.format(Math.round(total)));
+	}
 
 	private void clearOrderTable() {
 		currentOrderProducts.clear();
-		SwingUtilities.invokeLater(() -> view.getCurrentOrderModel().setRowCount(0));
+		SwingUtilities.invokeLater(() -> {
+			view.getCurrentOrderModel().setRowCount(0);
+			view.clearOrderSelection(); // FIX 3: resetear selección guardada
+			view.setOrderTotal("$0");   // FIX 2: resetear total
+		});
 	}
 
 	private void clearInvoiceView() {
@@ -399,11 +375,6 @@ public class OrderController {
 		return -1;
 	}
 
-	/**
-	 * Re-sincroniza un producto existente al servidor.
-	 * FIX: la quantity ya fue incrementada antes de llamar aquí, así que toRemove
-	 * se clona con (cantidad - 1) = la cantidad anterior.
-	 */
 	private void syncProductToServer(Order order, Product product) {
 		Product toRemove = cloneWithQuantity(product, product.getCantidad() - 1);
 		model.quitarProductoAPedido(order.getOrderId(), toRemove);

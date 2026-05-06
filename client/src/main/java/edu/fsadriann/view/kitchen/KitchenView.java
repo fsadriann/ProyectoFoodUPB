@@ -199,6 +199,8 @@ public class KitchenView extends JFrame {
         JScrollPane scroll = new JScrollPane(body);
         scroll.setBorder(null);
         scroll.getViewport().setBackground(bg);
+        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         return scroll;
     }
 
@@ -227,54 +229,46 @@ public class KitchenView extends JFrame {
     // CONSTRUCCION DE TARJETAS DETALLADAS
     // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Tarjeta completa para la columna de cola — muestra todos los detalles del pedido.
-     */
     private JPanel buildQueueCard(Order order) {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(BG);
         card.setBorder(BorderFactory.createCompoundBorder(
                 new LineBorder(BORDER_C), new EmptyBorder(10, 12, 10, 12)));
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 999));
-        card.setAlignmentX(LEFT_ALIGNMENT);
+        // FIX: ancho 100% del contenedor, altura libre
+        card.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 
-        // Fila superior: ID corto + badge premium
+        // Fila superior: ID + badge premium
         JPanel topRow = new JPanel(new BorderLayout(4, 0));
         topRow.setOpaque(false);
-        String sid = shortId(order.getOrderId());
-        JLabel idLabel = new JLabel("Pedido " + sid);
+        topRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 22));
+        topRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel idLabel = new JLabel("Pedido " + shortId(order.getOrderId()));
         idLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
         idLabel.setForeground(TEXT);
         topRow.add(idLabel, BorderLayout.WEST);
-        if (order.isPremium()) {
-            JLabel badge = badge("PREMIUM", GOLD, new Color(90, 60, 0));
-            topRow.add(badge, BorderLayout.EAST);
-        }
+        if (order.isPremium())
+            topRow.add(badge("PREMIUM", GOLD, new Color(90, 60, 0)), BorderLayout.EAST);
         card.add(topRow);
         card.add(vgap(6));
 
-        // Informacion del cliente
         card.add(infoRow("Cliente:", order.getCedulaCliente()));
         card.add(vgap(2));
         card.add(infoRow("Estado:", order.getEstado().name()));
         card.add(vgap(2));
-
-        // Cuadrante destino si existe
         if (order.getCuadranteDestino() != null && !order.getCuadranteDestino().isBlank()) {
             card.add(infoRow("Destino:", order.getCuadranteDestino()));
             card.add(vgap(2));
         }
 
-        // Separador
         card.add(separator());
         card.add(vgap(6));
 
-        // Lista de productos del carrito
         JLabel prodTitle = new JLabel("Productos:");
         prodTitle.setFont(new Font("SansSerif", Font.BOLD, 11));
         prodTitle.setForeground(TEXT2);
-        prodTitle.setAlignmentX(LEFT_ALIGNMENT);
+        prodTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(prodTitle);
         card.add(vgap(4));
 
@@ -288,33 +282,35 @@ public class KitchenView extends JFrame {
             card.add(vgap(2));
         }
 
-        // Badge de complejidad
         card.add(vgap(4));
         if (tieneComplejo) {
-            JLabel compBadge = badge("Requiere Fogon Grande (B4)", new Color(255, 230, 200), new Color(150, 60, 0));
-            compBadge.setAlignmentX(LEFT_ALIGNMENT);
-            card.add(compBadge);
+            JLabel b = badge("Requiere Fogon Grande (B4)",
+                    new Color(255, 230, 200), new Color(150, 60, 0));
+            b.setAlignmentX(Component.LEFT_ALIGNMENT);
+            card.add(b);
         } else {
-            JLabel simpBadge = badge("Fogon Normal (B1/B2/B3)", new Color(220, 240, 255), new Color(0, 60, 120));
-            simpBadge.setAlignmentX(LEFT_ALIGNMENT);
-            card.add(simpBadge);
+            JLabel b = badge("Fogon Normal (B1/B2/B3)",
+                    new Color(220, 240, 255), new Color(0, 60, 120));
+            b.setAlignmentX(Component.LEFT_ALIGNMENT);
+            card.add(b);
         }
 
         card.add(vgap(6));
         card.add(separator());
         card.add(vgap(6));
 
-        // Totales
-        card.add(infoRow("Subtotal:", "$" + COP.format((long) order.getSubtotal())));
+        card.add(infoRow("Subtotal:",  "$" + COP.format((long) order.getSubtotal())));
         card.add(vgap(2));
         card.add(infoRow("IVA (19%):", "$" + COP.format((long) order.getImpuesto())));
         card.add(vgap(2));
-        card.add(infoRow("Domicilio:", order.isPremium() ? "Gratis" : "$" + COP.format((long) order.getCostoDomi())));
+        card.add(infoRow("Domicilio:", order.isPremium()
+                ? "Gratis" : "$" + COP.format((long) order.getCostoDomi())));
         card.add(vgap(4));
 
         JPanel totalRow = new JPanel(new BorderLayout());
         totalRow.setOpaque(false);
         totalRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 22));
+        totalRow.setAlignmentX(Component.LEFT_ALIGNMENT);
         JLabel totalLbl = new JLabel("TOTAL");
         totalLbl.setFont(new Font("SansSerif", Font.BOLD, 12));
         totalLbl.setForeground(TEXT);
@@ -323,42 +319,39 @@ public class KitchenView extends JFrame {
         totalVal.setForeground(BLUE);
         totalRow.add(totalLbl, BorderLayout.WEST);
         totalRow.add(totalVal, BorderLayout.EAST);
-        totalRow.setAlignmentX(LEFT_ALIGNMENT);
         card.add(totalRow);
 
+        card.add(vgap(8));
         return card;
     }
 
-    /**
-     * Tarjeta compacta para fogones (rapidas/complejas) con boton de listo.
-     */
-    private JPanel buildFogonCard(Order order, String fogonLabel, Color fogonColor, Runnable onListo) {
+    private JPanel buildFogonCard(Order order, String fogonLabel,
+                                  Color fogonColor, Runnable onListo) {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(BG);
         card.setBorder(BorderFactory.createCompoundBorder(
                 new LineBorder(fogonColor, 2), new EmptyBorder(10, 12, 10, 12)));
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 999));
-        card.setAlignmentX(LEFT_ALIGNMENT);
+        card.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 
-        // Cabecera: ID + badge de fogon
         JPanel topRow = new JPanel(new BorderLayout(4, 0));
         topRow.setOpaque(false);
+        topRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 22));
+        topRow.setAlignmentX(Component.LEFT_ALIGNMENT);
         JLabel idLabel = new JLabel("Pedido " + shortId(order.getOrderId()));
         idLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
         idLabel.setForeground(TEXT);
         topRow.add(idLabel, BorderLayout.WEST);
-        JLabel fogonBadge = badge(fogonLabel, fogonColor, Color.WHITE);
-        topRow.add(fogonBadge, BorderLayout.EAST);
+        topRow.add(badge(fogonLabel, fogonColor, Color.WHITE), BorderLayout.EAST);
         card.add(topRow);
         card.add(vgap(2));
 
-        // Cliente + tipo
         card.add(infoRow("Cliente:", order.getCedulaCliente()));
         card.add(vgap(2));
         if (order.isPremium()) {
             JLabel prem = badge("PREMIUM", GOLD, new Color(90, 60, 0));
-            prem.setAlignmentX(LEFT_ALIGNMENT);
+            prem.setAlignmentX(Component.LEFT_ALIGNMENT);
             card.add(prem);
             card.add(vgap(4));
         }
@@ -366,11 +359,10 @@ public class KitchenView extends JFrame {
         card.add(separator());
         card.add(vgap(6));
 
-        // Productos
         JLabel prodTitle = new JLabel("Productos en preparacion:");
         prodTitle.setFont(new Font("SansSerif", Font.BOLD, 11));
         prodTitle.setForeground(TEXT2);
-        prodTitle.setAlignmentX(LEFT_ALIGNMENT);
+        prodTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(prodTitle);
         card.add(vgap(4));
 
@@ -384,7 +376,6 @@ public class KitchenView extends JFrame {
 
         card.add(vgap(8));
 
-        // Boton marcar listo
         JButton listoBtn = new JButton("Marcar listo");
         listoBtn.setFont(new Font("SansSerif", Font.BOLD, 11));
         listoBtn.setBackground(GREEN);
@@ -393,34 +384,33 @@ public class KitchenView extends JFrame {
         listoBtn.setBorderPainted(false);
         listoBtn.setFocusPainted(false);
         listoBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        listoBtn.setAlignmentX(LEFT_ALIGNMENT);
-        listoBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        listoBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        listoBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
         listoBtn.addActionListener(e -> onListo.run());
         card.add(listoBtn);
-
+        card.add(vgap(8));
         return card;
     }
 
-    /**
-     * Tarjeta compacta para columna de listos.
-     */
-    private JPanel buildListoCard(Order order, String displayId, String clientLabel) {
+    private JPanel buildListoCard(Order order, String displayId,
+                                  String clientLabel, Runnable onEnviar) {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(BG);
         card.setBorder(BorderFactory.createCompoundBorder(
                 new LineBorder(GREEN, 2), new EmptyBorder(10, 12, 10, 12)));
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 999));
-        card.setAlignmentX(LEFT_ALIGNMENT);
+        card.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 
         JPanel topRow = new JPanel(new BorderLayout());
         topRow.setOpaque(false);
+        topRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 22));
+        topRow.setAlignmentX(Component.LEFT_ALIGNMENT);
         JLabel idLabel = new JLabel("Pedido " + displayId);
         idLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
         idLabel.setForeground(TEXT);
         topRow.add(idLabel, BorderLayout.WEST);
-        JLabel checkBadge = badge("LISTO", GREEN, Color.WHITE);
-        topRow.add(checkBadge, BorderLayout.EAST);
+        topRow.add(badge("LISTO", GREEN, Color.WHITE), BorderLayout.EAST);
         card.add(topRow);
         card.add(vgap(4));
 
@@ -437,27 +427,38 @@ public class KitchenView extends JFrame {
                 JLabel pl = new JLabel(p.getNombre() + " x" + p.getCantidad());
                 pl.setFont(new Font("SansSerif", Font.PLAIN, 11));
                 pl.setForeground(TEXT3);
-                pl.setAlignmentX(LEFT_ALIGNMENT);
+                pl.setAlignmentX(Component.LEFT_ALIGNMENT);
                 card.add(pl);
                 card.add(vgap(1));
             }
             card.add(vgap(4));
-            if (order.getTotal() > 0) {
+            if (order.getTotal() > 0)
                 card.add(infoRow("Total:", "$" + COP.format((long) order.getTotal())));
-            }
         }
 
+        card.add(vgap(8));
+
+        JButton enviarBtn = new JButton("Enviar a entrega");
+        enviarBtn.setFont(new Font("SansSerif", Font.BOLD, 11));
+        enviarBtn.setBackground(BLUE);
+        enviarBtn.setForeground(Color.WHITE);
+        enviarBtn.setOpaque(true);
+        enviarBtn.setBorderPainted(false);
+        enviarBtn.setFocusPainted(false);
+        enviarBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        enviarBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        enviarBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+        enviarBtn.addActionListener(e -> onEnviar.run());
+        card.add(enviarBtn);
+        card.add(vgap(8));
         return card;
     }
-
-    /**
-     * Fila de un producto con nombre, cantidad, precio y badge de complejidad.
-     */
     private JPanel buildProductRow(Product p) {
         JPanel row = new JPanel(new BorderLayout(4, 0));
         row.setOpaque(false);
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 18));
-        row.setAlignmentX(LEFT_ALIGNMENT);
+        // FIX: altura fija, ancho libre dentro del contenedor
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel nameLabel = new JLabel(p.getNombre() + " x" + p.getCantidad());
         nameLabel.setFont(new Font("SansSerif", Font.PLAIN, 11));
@@ -466,18 +467,30 @@ public class KitchenView extends JFrame {
 
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
         right.setOpaque(false);
-
-        if (p.isComplejo()) {
-            JLabel cBadge = badge("complejo", new Color(255, 220, 180), new Color(140, 60, 0));
-            right.add(cBadge);
-        }
-
-        JLabel priceLabel = new JLabel("$" + COP.format((long) p.getPrecio() * p.getCantidad()));
-        priceLabel.setFont(new Font("SansSerif", Font.BOLD, 11));
-        priceLabel.setForeground(BLUE);
-        right.add(priceLabel);
-
+        if (p.isComplejo())
+            right.add(badge("complejo", new Color(255, 220, 180), new Color(140, 60, 0)));
+        JLabel price = new JLabel("$" + COP.format((long) p.getPrecio() * p.getCantidad()));
+        price.setFont(new Font("SansSerif", Font.BOLD, 11));
+        price.setForeground(BLUE);
+        right.add(price);
         row.add(right, BorderLayout.EAST);
+        return row;
+    }
+
+    // FIX: infoRow con ancho libre
+    private JPanel infoRow(String label, String value) {
+        JPanel row = new JPanel(new BorderLayout(6, 0));
+        row.setOpaque(false);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 18));
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel lbl = new JLabel(label);
+        lbl.setFont(new Font("SansSerif", Font.BOLD, 11));
+        lbl.setForeground(TEXT2);
+        JLabel val = new JLabel(value);
+        val.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        val.setForeground(TEXT);
+        row.add(lbl, BorderLayout.WEST);
+        row.add(val, BorderLayout.EAST);
         return row;
     }
 
@@ -495,21 +508,6 @@ public class KitchenView extends JFrame {
         return l;
     }
 
-    private JPanel infoRow(String label, String value) {
-        JPanel row = new JPanel(new BorderLayout(6, 0));
-        row.setOpaque(false);
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 16));
-        row.setAlignmentX(LEFT_ALIGNMENT);
-        JLabel lbl = new JLabel(label);
-        lbl.setFont(new Font("SansSerif", Font.BOLD, 11));
-        lbl.setForeground(TEXT2);
-        JLabel val = new JLabel(value);
-        val.setFont(new Font("SansSerif", Font.PLAIN, 11));
-        val.setForeground(TEXT);
-        row.add(lbl, BorderLayout.WEST);
-        row.add(val, BorderLayout.EAST);
-        return row;
-    }
 
     private JSeparator separator() {
         JSeparator sep = new JSeparator();
@@ -630,15 +628,11 @@ public class KitchenView extends JFrame {
         });
     }
 
-    /** Agrega pedido a Listos con tarjeta compacta (sin Order). */
-    public void addToListos(String orderId, String displayId, String clientName) {
-        addToListosFull(orderId, displayId, clientName, null);
-    }
 
-    /** Agrega pedido a Listos con Order completo para mostrar resumen. */
-    public void addToListosFull(String orderId, String displayId, String clientName, Order order) {
+    public void addToListosFull(String orderId, String displayId,
+                                String clientName, Order order, Runnable onEnviar) {
         SwingUtilities.invokeLater(() -> {
-            JPanel card = buildListoCard(order, displayId, clientName);
+            JPanel card = buildListoCard(order, displayId, clientName, onEnviar);
             Component spacer = Box.createVerticalStrut(8);
             listosCards.put(orderId, new Component[]{card, spacer});
             listosBody.add(card);
@@ -647,10 +641,17 @@ public class KitchenView extends JFrame {
         });
     }
 
+    public void addToListos(String orderId, String displayId, String clientName) {
+        addToListosFull(orderId, displayId, clientName, null, null);
+    }
+
     // Quitar tarjetas
     public void removeFromQueue(String orderId)     { removeCard(queueCards,     queueBody,     orderId); }
     public void removeFromRapidas(String orderId)   { removeCard(rapidasCards,   rapidasBody,   orderId); }
     public void removeFromComplejas(String orderId) { removeCard(complejasCards, complejasBody, orderId); }
+    public void removeFromListos(String orderId) {
+        removeCard(listosCards, listosBody, orderId);
+    }
 
     private void removeCard(Map<String, Component[]> map, JPanel body, String orderId) {
         SwingUtilities.invokeLater(() -> {

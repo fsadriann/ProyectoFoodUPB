@@ -4,71 +4,22 @@ import edu.fsadriann.app.priorityqueue.PriorityQueue;
 import edu.fsadriann.server.model.product.Product;
 import edu.fsadriann.model.iterator.Iterator;
 
-/**
- * Servicio de cocina: cola priorizada + estaciones reales. RF-05.
- *
- * <p><b>Estructura principal:</b> {@code PriorityQueue<Order>} del JAR (2 niveles).
- * <ul>
- *   <li>Nivel 0 → pedidos premium (mayor prioridad)</li>
- *   <li>Nivel 1 → pedidos estándar</li>
- *   <li>Dentro de cada nivel: FIFO garantizado por la cola interna del JAR</li>
- * </ul>
- *
- * <p><b>Estado de fogones:</b> 4 campos {@code Order} (null = libre, no-null = ocupado).
- * No se usa ninguna colección de Java para esto — solo referencias directas.
- * <pre>
- *   fogonGrande   → null | Order  (complejo)
- *   fogonNormal1  → null | Order  (simple)
- *   fogonNormal2  → null | Order  (simple)
- *   fogonNormal3  → null | Order  (simple)
- * </pre>
- *
- * <p><b>Lógica de bloqueo:</b> si el fogón compatible está ocupado, el pedido
- * permanece en la cola hasta que {@link #marcarPedidoListo(String)} libere el fogón
- * y dispare {@link #procesarSiguientePedido()} automáticamente.
- *
- * @author fsadriann
- */
+import java.rmi.RemoteException;
+import java.util.List;
+
 public class KitchenService implements KitchenInterface {
 
     private static final int NIVELES_PRIORIDAD = 2;
 
-    /** Cola de prioridad del JAR. */
     private final PriorityQueue<Order> cola;
 
-    /**
-     * Referencia opcional a {@code OrderService} para sincronización de estado. A-02.
-     *
-     * <p>Si es {@code null}: modo legacy — el estado se muta directamente sobre el objeto
-     * compartido (funciona en memoria por identidad de referencia Java).
-     *
-     * <p>Si no es {@code null}: modo coordinado — además de la mutación directa,
-     * se llama a {@code orderService.marcarListo()} para formalizar el cambio en
-     * la fuente de verdad central. Obligatorio con MongoDB o RMI en fases futuras.
-     */
     private final OrderService orderService;
 
     // ── Constructores ─────────────────────────────────────────────────────────────
-
-    /**
-     * Constructor legacy (backward compatible). Sin coordinación formal con {@code OrderService}.
-     * Funciona correctamente en memoria por identidad de referencia Java.
-     * Todos los tests existentes de RF-05 usan este constructor.
-     */
     public KitchenService() {
         this(null);
     }
 
-    /**
-     * Constructor coordinado. {@code KitchenService} sincronizará los cambios de estado
-     * con {@code orderService.marcarListo()} en cada llamada a {@link #marcarPedidoListo}.
-     *
-     * <p>Usar en integración real (Swing, MongoDB, RMI) para garantizar que
-     * {@code OrderService} es la fuente de verdad sin depender de identidad de objeto.
-     *
-     * @param orderService instancia de {@code OrderService} del sistema; puede ser {@code null}
-     *                     para modo legacy
-     */
     public KitchenService(OrderService orderService) {
         this.cola         = new PriorityQueue<>(NIVELES_PRIORIDAD);
         this.orderService = orderService;
@@ -82,10 +33,6 @@ public class KitchenService implements KitchenInterface {
 
     // ── encolarPedido ─────────────────────────────────────────────────────────
 
-    /**
-     * {@inheritDoc}
-     * Premium → prioridad 0 | Estándar → prioridad 1.
-     */
     @Override
     public void encolarPedido(Order pedido) {
         if (pedido == null)
@@ -96,19 +43,6 @@ public class KitchenService implements KitchenInterface {
         cola.insert(pedido.isPremium() ? 0 : 1, pedido);
     }
 
-    // ── procesarSiguientePedido ───────────────────────────────────────────────
-
-    /**
-     * {@inheritDoc}
-     *
-     * <p>Algoritmo:
-     * <ol>
-     *   <li>Mira el tope de la cola sin extraer ({@code peek}).</li>
-     *   <li>Si es complejo y {@link #fogonGrande} está libre → extrae y asigna.</li>
-     *   <li>Si es simple y hay algún {@code FOGON_NORMAL} libre → extrae y asigna al primero.</li>
-     *   <li>Si el fogón compatible está ocupado → no extrae, retorna {@code null}.</li>
-     * </ol>
-     */
     @Override
     public Order procesarSiguientePedido() {
         if (cola.isEmpty()) return null;
@@ -146,14 +80,6 @@ public class KitchenService implements KitchenInterface {
         }
     }
 
-    // ── marcarPedidoListo ─────────────────────────────────────────────────────
-
-    /**
-     * {@inheritDoc}
-     *
-     * <p>Pasos: busca el pedido en fogones → valida estado → marca LISTO →
-     * libera fogón → llama {@link #procesarSiguientePedido()}.
-     */
     @Override
     public boolean marcarPedidoListo(String pedidoId) {
         if (pedidoId == null)
@@ -167,20 +93,12 @@ public class KitchenService implements KitchenInterface {
             throw new IllegalStateException(
                 "Solo se marca LISTO desde EN_PREPARACION. Estado: " + enFogon.getEstado());
 
-        // A-02: sincronización con OrderService.
-        // MODO COORDINADO: orderService.marcarListo() aplica el setEstado(LISTO)
-        //   internamente y formaliza el cambio en la fuente de verdad.
-        //   NO llamar setEstado directamente (evita doble-set que causaría
-        //   IllegalStateException en marcarListo al encontrar ya LISTO).
-        // MODO LEGACY: sin orderService, el setEstado directo funciona por identidad
-        //   de referencia Java (comportamiento original, backward compatible).
         if (orderService != null) {
             orderService.marcarListo(pedidoId); // delega setEstado(LISTO) + actualizar()
         } else {
             enFogon.setEstado(EstadoPedido.LISTO); // legacy: mutación directa
         }
         liberarFogon(pedidoId);
-        procesarSiguientePedido(); // intenta asignar siguiente compatible
         return true;
     }
 
@@ -202,6 +120,58 @@ public class KitchenService implements KitchenInterface {
     }
     @Override public boolean colaVacia() {
         return cola.isEmpty();
+    }
+
+    @Override
+    public java.util.List<Order> procesarPedidosDisponibles() {
+        java.util.List<Order> procesados = new java.util.ArrayList<>();
+        if (cola.isEmpty()) return procesados;
+
+        // Extraemos todos los pedidos de la cola temporalmente
+        java.util.List<Order> pendientes = new java.util.ArrayList<>();
+        while (!cola.isEmpty()) {
+            Order o = cola.extract();
+            if (o != null) pendientes.add(o);
+        }
+
+        // Intentamos asignar cada uno al fogón compatible
+        java.util.List<Order> devolver = new java.util.ArrayList<>();
+        for (Order o : pendientes) {
+            boolean asignado = false;
+            if (esComplejo(o)) {
+                if (fogonGrande == null) {
+                    o.setEstado(EstadoPedido.EN_PREPARACION);
+                    fogonGrande = o;
+                    procesados.add(o);
+                    asignado = true;
+                }
+            } else {
+                if (fogonNormal1 == null) {
+                    o.setEstado(EstadoPedido.EN_PREPARACION);
+                    fogonNormal1 = o;
+                    procesados.add(o);
+                    asignado = true;
+                } else if (fogonNormal2 == null) {
+                    o.setEstado(EstadoPedido.EN_PREPARACION);
+                    fogonNormal2 = o;
+                    procesados.add(o);
+                    asignado = true;
+                } else if (fogonNormal3 == null) {
+                    o.setEstado(EstadoPedido.EN_PREPARACION);
+                    fogonNormal3 = o;
+                    procesados.add(o);
+                    asignado = true;
+                }
+            }
+            if (!asignado) devolver.add(o);
+        }
+
+        // Re-encolar los que no pudieron asignarse, respetando prioridad
+        for (Order o : devolver) {
+            cola.insert(o.isPremium() ? 0 : 1, o);
+        }
+
+        return procesados;
     }
 
     // ── Helpers privados ──────────────────────────────────────────────────────

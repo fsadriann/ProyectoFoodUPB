@@ -1,14 +1,31 @@
 [
-  { "origen": "UPB",          "destino": "Cabecera",      "distancia": 1.8 },
-  { "origen": "UPB",          "destino": "Provenza",      "distancia": 1.2 },
-  { "origen": "UPB",          "destino": "SanFrancisco",  "distancia": 1.5 },
-  { "origen": "Cabecera",     "destino": "Lagos",         "distancia": 2.1 },
-  { "origen": "Cabecera",     "destino": "Centro",        "distancia": 2.5 },
-  { "origen": "Provenza",     "destino": "SanFrancisco",  "distancia": 0.9 },
-  { "origen": "SanFrancisco", "destino": "Mejoras",       "distancia": 1.3 },
-  { "origen": "Centro",       "destino": "Mejoras",       "distancia": 1.0 },
-  { "origen": "Centro",       "destino": "Giron",         "distancia": 8.5 },
-  { "origen": "Lagos",        "destino": "Floridablanca", "distancia": 5.2 },
-  { "origen": "Floridablanca","destino": "Piedecuesta",   "distancia": 9.0 },
-  { "origen": "Mejoras",      "destino": "Giron",         "distancia": 7.8 }
+  { "origen": "UPB",           "destino": "Provenza",      "distancia": 3.20 },
+  { "origen": "UPB",           "destino": "Lagos",         "distancia": 4.50 },
+  { "origen": "UPB",           "destino": "Cabecera",      "distancia": 7.00 },
+  { "origen": "UPB",           "destino": "Centro",        "distancia": 9.50 },
+
+  { "origen": "Provenza",      "destino": "Lagos",         "distancia": 1.30 },
+  { "origen": "Provenza",      "destino": "SanFrancisco",  "distancia": 2.60 },
+  { "origen": "Provenza",      "destino": "Centro",        "distancia": 6.00 },
+
+  { "origen": "Lagos",         "destino": "SanFrancisco",  "distancia": 1.30 },
+  { "origen": "Lagos",         "destino": "Cabecera",      "distancia": 2.50 },
+  { "origen": "Lagos",         "destino": "Floridablanca", "distancia": 4.00 },
+
+  { "origen": "SanFrancisco",  "destino": "Cabecera",      "distancia": 1.20 },
+  { "origen": "SanFrancisco",  "destino": "Mejoras",       "distancia": 2.40 },
+
+  { "origen": "Cabecera",      "destino": "Mejoras",       "distancia": 1.20 },
+  { "origen": "Cabecera",      "destino": "Centro",        "distancia": 2.50 },
+  { "origen": "Cabecera",      "destino": "Floridablanca", "distancia": 3.50 },
+
+  { "origen": "Mejoras",       "destino": "Centro",        "distancia": 1.30 },
+  { "origen": "Mejoras",       "destino": "Piedecuesta",   "distancia": 6.00 },
+
+  { "origen": "Centro",        "destino": "Giron",         "distancia": 7.00 },
+
+  { "origen": "Floridablanca", "destino": "Piedecuesta",   "distancia": 5.50 },
+  { "origen": "Floridablanca", "destino": "Giron",         "distancia": 8.50 },
+
+  { "origen": "Piedecuesta",   "destino": "Giron",         "distancia": 12.00 }
 ]

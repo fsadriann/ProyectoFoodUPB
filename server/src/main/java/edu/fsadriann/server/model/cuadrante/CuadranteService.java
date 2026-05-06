@@ -8,11 +8,13 @@ import java.rmi.RemoteException;
 
 public class CuadranteService implements CuadranteInterface {
 
-    private static final int CAPACIDAD_MAX = 50;
-    private final matrixGraph<String> mapa;
+    private static final int    CAPACIDAD_MAX = 50;
+    private static final String NODO_ORIGEN   = "UPB";
+
+
+    private final matrixGraph<String>   mapa;
     private final LinkedList<Cuadrante> cuadrantes;
-    private final CuadranteRepository repository = new CuadranteRepository();
-    private static final String NODO_ORIGEN = "UPB";
+    private final CuadranteRepository  repository = new CuadranteRepository();
 
     public CuadranteService() {
         this.mapa       = new matrixGraph<>(CAPACIDAD_MAX);
@@ -21,12 +23,10 @@ public class CuadranteService implements CuadranteInterface {
     }
 
     private void cargarDatos() {
-        // Cargar nodos
         for (Cuadrante c : repository.findAllCuadrantes()) {
             mapa.addVortex(c.getNombre());
             cuadrantes.add(c);
         }
-        // Cargar conexiones
         for (CuadranteRepository.ConexionEntry conn : repository.findAllConexiones()) {
             try {
                 mapa.addEdgeWithWeight(conn.origen,  conn.destino, conn.distancia);
@@ -48,13 +48,13 @@ public class CuadranteService implements CuadranteInterface {
         boolean agregado = mapa.addVortex(cuadrante.getNombre());
         if (agregado) {
             cuadrantes.add(cuadrante);
-            repository.saveCuadrante(cuadrante);  // ← persiste
+            repository.saveCuadrante(cuadrante);
         }
         return agregado;
     }
 
     @Override
-    public boolean editarCuadrante(Cuadrante cuadrante) throws RemoteException{
+    public boolean editarCuadrante(Cuadrante cuadrante) throws RemoteException {
         if (cuadrante == null)
             throw new IllegalArgumentException("El cuadrante no puede ser nulo.");
         Iterator<Cuadrante> it = cuadrantes.iterator();
@@ -62,13 +62,31 @@ public class CuadranteService implements CuadranteInterface {
             Cuadrante c = it.next();
             if (c != null && c.getNombre().equals(cuadrante.getNombre())) {
                 c.setDescripcion(cuadrante.getDescripcion());
-                c.setLatitud(cuadrante.getLatitud());
-                c.setLongitud(cuadrante.getLongitud());
+                c.setDistanciaDesdeUPB(cuadrante.getDistanciaDesdeUPB());
                 c.setDisponible(cuadrante.isDisponible());
+                repository.saveCuadrante(c);
                 return true;
             }
         }
-        return false; // no encontrado
+        return false;
+    }
+
+    @Override
+    public boolean eliminarCuadrante(String nombre) throws RemoteException {
+        if (nombre == null || nombre.isBlank()) return false;
+        if (NODO_ORIGEN.equals(nombre)) return false; // UPB nunca se elimina
+        if (mapa.searchVertex(nombre) == -1) return false;
+
+        // 1. Persistir eliminación en JSON
+        repository.deleteCuadrante(nombre);
+        repository.deleteConexionesDe(nombre);
+
+        // 2. Eliminar del grafo — removeVortex elimina el nodo y todas sus aristas
+        mapa.removeVortex(nombre);
+
+        // La lista en memoria (cuadrantes) no necesita modificarse:
+        // listarCuadrantes() filtra usando el grafo como fuente de verdad
+        return true;
     }
 
     @Override
@@ -82,9 +100,21 @@ public class CuadranteService implements CuadranteInterface {
         return null;
     }
 
+    /**
+     * Devuelve solo los cuadrantes que aún existen en el grafo.
+     * Así no se necesita remove() en LinkedList — el grafo es la fuente de verdad.
+     */
     @Override
     public LinkedList<Cuadrante> listarCuadrantes() throws RemoteException {
-        return cuadrantes;
+        LinkedList<Cuadrante> result = new LinkedList<>();
+        Iterator<Cuadrante> it = cuadrantes.iterator();
+        while (it.hasNext()) {
+            Cuadrante c = it.next();
+            if (c != null && mapa.searchVertex(c.getNombre()) != -1) {
+                result.add(c);
+            }
+        }
+        return result;
     }
 
     // ── Grafo — construcción ──────────────────────────────────────────────────
@@ -100,11 +130,20 @@ public class CuadranteService implements CuadranteInterface {
         try {
             boolean ab = mapa.addEdgeWithWeight(nombreA, nombreB, distanciaKm);
             boolean ba = mapa.addEdgeWithWeight(nombreB, nombreA, distanciaKm);
-            if (ab && ba) repository.saveConexion(nombreA, nombreB, distanciaKm); // ← persiste
+            if (ab && ba) repository.saveConexion(nombreA, nombreB, distanciaKm);
             return ab && ba;
         } catch (Exception e) {
             return false;
         }
+    }
+
+    @Override
+    public LinkedList<CuadranteRepository.ConexionEntry> listarConexiones() throws RemoteException {
+        LinkedList<CuadranteRepository.ConexionEntry> result = new LinkedList<>();
+        for (CuadranteRepository.ConexionEntry e : repository.findAllConexiones()) {
+            result.add(e);
+        }
+        return result;
     }
 
     // ── Grafo — rutas ─────────────────────────────────────────────────────────
@@ -112,7 +151,7 @@ public class CuadranteService implements CuadranteInterface {
     @Override
     public LinkedList<String> calcularRutaMasCorta(String origen, String destino) throws RemoteException {
         if (!validarNodos(origen, destino)) return null;
-        if (origen.equals(destino)) return null; // misma ubicación
+        if (origen.equals(destino)) return null;
         if (!mapa.existsPath(origen, destino)) return null;
         return mapa.dijkstra(origen, destino);
     }
@@ -163,6 +202,7 @@ public class CuadranteService implements CuadranteInterface {
         return mapa.seeMatAdj();
     }
 
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private boolean validarNodos(String a, String b) {
         if (a == null || b == null) return false;

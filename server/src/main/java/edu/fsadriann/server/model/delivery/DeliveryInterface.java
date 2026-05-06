@@ -1,12 +1,12 @@
 package edu.fsadriann.server.model.delivery;
 
-import edu.fsadriann.server.model.order.OrderService;
+import java.rmi.Remote;
+import java.rmi.RemoteException;
 
-public interface DeliveryInterface {
-    Delivery asignarPedidoARepartidor(String orderId, String repartidorId, OrderService os);
-
-    boolean iniciarEntrega(String orderId, OrderService os);
-    boolean completarEntrega(String orderId, OrderService os);
-    Delivery buscarEntregaPorPedido(String orderId);
-    boolean yaEstaAsignado(String orderId);
+public interface DeliveryInterface extends Remote {
+    Delivery asignarPedidoARepartidor(String orderId, String repartidorId) throws RemoteException;
+    boolean  iniciarEntrega(String orderId)                                 throws RemoteException;
+    boolean  completarEntrega(String orderId)                               throws RemoteException;
+    Delivery buscarEntregaPorPedido(String orderId)                         throws RemoteException;
+    boolean  yaEstaAsignado(String orderId)                                 throws RemoteException;
 }

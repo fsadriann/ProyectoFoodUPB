@@ -1,6 +1,7 @@
 package edu.fsadriann.client.controller.auth;
 
 import edu.fsadriann.client.controller.admin.AdminController;
+import edu.fsadriann.client.controller.delivery.DeliveryController;
 import edu.fsadriann.client.controller.kitchen.KitchenController;
 import edu.fsadriann.client.controller.operator.OperatorController;
 import edu.fsadriann.client.model.ClientModel;
@@ -10,29 +11,30 @@ import edu.fsadriann.view.auth.LoginView;
 
 public class AuthClientController {
 
-    private final ClientModel       model;
-    private final LoginView         loginView;
+    private final ClientModel        model;
+    private final LoginView          loginView;
     private final OperatorController operatorController;
-    private final AdminController   adminController;
-    private final KitchenController kitchenController;
-    private final ViewRouter        viewRouter;
+    private final AdminController    adminController;
+    private final KitchenController  kitchenController;
+    private final DeliveryController deliveryController;
+    private final ViewRouter         viewRouter;
 
-    // Rastrear si el kitchenController ya fue inicializado para no
-    // duplicar listeners en cada login del cocinero
-    private boolean kitchenInitialized = false;
+    private boolean kitchenInitialized  = false;
 
     public AuthClientController(ClientModel model,
                                 LoginView loginView,
                                 OperatorController operatorController,
                                 AdminController adminController,
                                 KitchenController kitchenController,
+                                DeliveryController deliveryController,
                                 ViewRouter viewRouter) {
-        this.model              = model;
-        this.loginView          = loginView;
-        this.operatorController = operatorController;
-        this.adminController    = adminController;
-        this.kitchenController  = kitchenController;
-        this.viewRouter         = viewRouter;
+        this.model               = model;
+        this.loginView           = loginView;
+        this.operatorController  = operatorController;
+        this.adminController     = adminController;
+        this.kitchenController   = kitchenController;
+        this.deliveryController  = deliveryController;
+        this.viewRouter          = viewRouter;
     }
 
     public void init() {
@@ -70,14 +72,15 @@ public class AuthClientController {
             adminController.init();
         }
         if (role == Rol.COCINA) {
-            // init() solo la primera vez para no duplicar listeners del timer
             if (!kitchenInitialized) {
                 kitchenController.init();
                 kitchenInitialized = true;
             } else {
-                // En logins posteriores solo relanzar el refresh
                 kitchenController.show();
             }
+        }
+        if (role == Rol.ENTREGA) {
+            deliveryController.init();
         }
 
         viewRouter.show(role);
@@ -85,7 +88,7 @@ public class AuthClientController {
 
     private void showLoginView() {
         model.logout();
-        kitchenInitialized = false; // resetear para proxima sesion limpia
+        kitchenInitialized = false;
         viewRouter.showLogin();
         loginView.setVisible(true);
         loginView.setMessage("Sesion cerrada.");

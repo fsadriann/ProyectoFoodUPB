@@ -2,6 +2,7 @@ package edu.fsadriann.client.factory;
 
 import edu.fsadriann.client.controller.admin.AdminController;
 import edu.fsadriann.client.controller.auth.AuthClientController;
+import edu.fsadriann.client.controller.delivery.DeliveryController;
 import edu.fsadriann.client.controller.kitchen.KitchenController;
 import edu.fsadriann.client.controller.operator.OperatorController;
 import edu.fsadriann.client.controller.order.OrderController;
@@ -31,24 +32,28 @@ public class ClientFactory {
 
         ClientModel model = new ClientModel(env.getIp(), env.getPort(), env.getServiceName());
 
-        String operadorEmail = System.getProperty("user.email",
-                System.getenv().getOrDefault("USER_EMAIL", "Operador"));
+        String userLabel = System.getProperty("user.email",
+                System.getenv().getOrDefault("USER_EMAIL", "Usuario"));
 
-        LoginView    loginView    = new LoginView(operadorEmail);
-        OperatorView view         = new OperatorView(operadorEmail);
-        AdminView    adminView    = new AdminView(operadorEmail);
-        KitchenView  kitchenView  = new KitchenView(operadorEmail);
-        DeliveryView deliveryView = new DeliveryView(operadorEmail);
+        // ── Vistas ────────────────────────────────────────────────────────────
+        LoginView    loginView    = new LoginView(userLabel);
+        OperatorView operatorView = new OperatorView(userLabel);
+        AdminView    adminView    = new AdminView(userLabel);
+        KitchenView  kitchenView  = new KitchenView(userLabel);
+        DeliveryView deliveryView = new DeliveryView(userLabel);
 
-        ProductController  productController  = new ProductController(model, view);
-        OrderController    orderController    = new OrderController(model, view);
-        OperatorController operatorController = new OperatorController(model, view, productController, orderController);
+        // ── Controladores ─────────────────────────────────────────────────────
+        ProductController  productController  = new ProductController(model, operatorView);
+        OrderController    orderController    = new OrderController(model, operatorView);
+        OperatorController operatorController = new OperatorController(model, operatorView, productController, orderController);
         AdminController    adminController    = new AdminController(model, adminView);
+        KitchenController  kitchenController  = new KitchenController(model, kitchenView);
+        DeliveryController deliveryController = new DeliveryController(model, deliveryView);
 
-        KitchenController kitchenController = new KitchenController(model, kitchenView);
+        // ── Router ────────────────────────────────────────────────────────────
+        ViewRouter router = new ViewRouter(loginView, operatorView, adminView, kitchenView, deliveryView);
 
-        ViewRouter router = new ViewRouter(loginView, view, adminView, kitchenView, deliveryView);
-
+        // ── Listeners de logout (los que no están en sus propios controladores)
         adminView.addLogoutListener(() -> {
             model.logout();
             router.showLogin();
@@ -58,14 +63,13 @@ public class ClientFactory {
             kitchenController.hide();
             router.showLogin();
         });
-        deliveryView.addLogoutListener(() -> {
-            model.logout();
-            router.showLogin();
-        });
+        // El logout de deliveryView ya está manejado dentro de DeliveryController
 
+        // ── AuthController ────────────────────────────────────────────────────
         return new AuthClientController(
                 model, loginView,
-                operatorController, adminController, kitchenController,
+                operatorController, adminController,
+                kitchenController,  deliveryController,
                 router);
     }
 }

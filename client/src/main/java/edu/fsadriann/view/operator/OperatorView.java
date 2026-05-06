@@ -29,15 +29,19 @@ public class OperatorView extends JFrame {
 
     private JPanel clientInfoPanel;
     private JLabel clientNameLabel;
-    private JLabel clientAddressLabel;
+    private JLabel clientAddressLabel;   // muestra el cuadrante del cliente
     private JLabel clientPhoneLabel;
-    private JLabel clientTipoLabel;       // FIX: muestra Estándar / Premium
+    private JLabel clientTipoLabel;
 
     private JPanel frequentOrdersSection;
     private JPanel frequentOrdersListPanel;
 
     private DefaultTableModel clientTableModel;
     private DefaultTableModel recentOrdersModel;
+
+    private int    lastSelectedOrderRow = -1;
+    private JLabel orderTotalLabel;
+
 
     // ── Right panel — products ────────────────────────────────────────────────
     private JTextField        searchProductField;
@@ -47,7 +51,6 @@ public class OperatorView extends JFrame {
     private JTable            productsTable;
 
     // ── Right panel — current order ───────────────────────────────────────────
-    // FIX: 4 columnas — Producto | Cant. | Precio unit. | Subtotal
     private DefaultTableModel currentOrderModel;
     private JTable            currentOrderTable;
     private JButton           removeProductBtn;
@@ -64,15 +67,18 @@ public class OperatorView extends JFrame {
     private JLabel            invoiceIvaVal;
     private JLabel            invoiceDomicilioVal;
     private JLabel            invoiceTotalVal;
-    // FIX: tabla de factura también con 4 columnas
     private DefaultTableModel invoiceOrderModel;
     private JTable            invoiceOrderTable;
+
+    // ── Left panel bottom — action buttons (siempre visibles) ─────────────────
     private JButton           clearInvoiceOrderBtn;
     private JButton           sendToKitchenBtn;
 
     // ── Topbar / status ───────────────────────────────────────────────────────
     private JButton logoutBtn;
     private JLabel  statusLabel;
+
+    private JComboBox<String> cuadranteSelector;
 
     public OperatorView(String operadorEmail) {
         super("Food UPB — Operador");
@@ -92,6 +98,9 @@ public class OperatorView extends JFrame {
         root.add(buildStatusBar(),       BorderLayout.SOUTH);
 
         setContentPane(root);
+
+        // Abrir maximizado (pantalla completa en modo ventana)
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
         pack();
         setLocationRelativeTo(null);
     }
@@ -102,25 +111,21 @@ public class OperatorView extends JFrame {
 
     private void initModels() {
         clientTableModel = new DefaultTableModel(
-                new Object[]{"Nombres", "Correo", "Teléfono", "Tipo"}, 0) {
+                new Object[]{"Nombres", "Correo", "Telefono", "Tipo", "Cuadrante"}, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         recentOrdersModel = new DefaultTableModel(
-                new Object[]{"Pedido", "Estado", "Ítems", "Total"}, 0) {
+                new Object[]{"Pedido", "Estado", "Items", "Total"}, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         productsTableModel = new DefaultTableModel(
-                new Object[]{"ID", "Nombre", "Categoría", "Precio", "Disponible"}, 0) {
+                new Object[]{"ID", "Nombre", "Categoria", "Precio", "Disponible"}, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
-
-        // FIX: 4 columnas en el pedido actual
         currentOrderModel = new DefaultTableModel(
                 new Object[]{"Producto", "Cant.", "Precio unit.", "Subtotal"}, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
-
-        // FIX: 4 columnas en la tabla de factura
         invoiceOrderModel = new DefaultTableModel(
                 new Object[]{"Producto", "Cant.", "Precio unit.", "Subtotal"}, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -145,16 +150,13 @@ public class OperatorView extends JFrame {
                 new MatteBorder(0, 0, 1, 0, BORDER_C),
                 new EmptyBorder(10, 20, 10, 20)
         ));
-
-        JLabel title = new JLabel("Food UPB — Operador");
+        JLabel title = new JLabel("Food UPB - Operador");
         title.setFont(new Font("SansSerif", Font.BOLD, 15));
         title.setForeground(BLUE);
-
-        logoutBtn = new JButton("Cerrar sesión");
+        logoutBtn = new JButton("Cerrar sesion");
         logoutBtn.setFont(new Font("SansSerif", Font.PLAIN, 12));
         logoutBtn.setFocusPainted(false);
         logoutBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
         top.add(title,     BorderLayout.WEST);
         top.add(logoutBtn, BorderLayout.EAST);
         return top;
@@ -171,12 +173,11 @@ public class OperatorView extends JFrame {
                 new MatteBorder(0, 0, 1, 0, BORDER_C),
                 new EmptyBorder(8, 20, 8, 20)
         ));
-
         String[] steps = {"1  Identificar", "2  Pedido", "3  Factura", "4  Confirmar"};
         stepLabels = new JLabel[4];
         for (int i = 0; i < steps.length; i++) {
             if (i > 0) {
-                JLabel arrow = new JLabel("  →  ");
+                JLabel arrow = new JLabel("  ->  ");
                 arrow.setFont(new Font("SansSerif", Font.PLAIN, 11));
                 arrow.setForeground(TEXT3);
                 panel.add(arrow);
@@ -225,8 +226,8 @@ public class OperatorView extends JFrame {
         JPanel split = new JPanel(new BorderLayout(12, 0));
         split.setBackground(BG2);
         split.setBorder(new EmptyBorder(14, 16, 14, 16));
-        split.add(buildLeftPanel(),           BorderLayout.WEST);
-        split.add(buildRightPanel(onSearch),  BorderLayout.CENTER);
+        split.add(buildLeftPanel(),          BorderLayout.WEST);
+        split.add(buildRightPanel(onSearch), BorderLayout.CENTER);
 
         content.add(split, BorderLayout.CENTER);
         return content;
@@ -234,12 +235,19 @@ public class OperatorView extends JFrame {
 
     // ─────────────────────────────────────────────────────────────────────────
     // LEFT PANEL
+    // BorderLayout: identificacion arriba (NORTH), botones de accion abajo (SOUTH)
+    // Sin scroll — todo siempre visible.
     // ─────────────────────────────────────────────────────────────────────────
 
-    private JScrollPane buildLeftPanel() {
-        JPanel left = new JPanel();
-        left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS));
+    private JPanel buildLeftPanel() {
+        JPanel left = new JPanel(new BorderLayout());
         left.setBackground(BG2);
+        left.setPreferredSize(new Dimension(272, 0));
+
+        // ── Parte superior ────────────────────────────────────────────────────
+        JPanel top = new JPanel();
+        top.setLayout(new BoxLayout(top, BoxLayout.Y_AXIS));
+        top.setBackground(BG2);
 
         // Search card
         JPanel searchCard = new JPanel();
@@ -250,7 +258,7 @@ public class OperatorView extends JFrame {
         searchCard.setAlignmentX(Component.LEFT_ALIGNMENT);
         searchCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 110));
 
-        JLabel identLabel = secLabel("Identificación");
+        JLabel identLabel = secLabel("Identificacion");
         identLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         searchCard.add(identLabel);
         searchCard.add(Box.createVerticalStrut(10));
@@ -258,7 +266,7 @@ public class OperatorView extends JFrame {
         JPanel searchRow = new JPanel(new BorderLayout(6, 0));
         searchRow.setOpaque(false);
         searchRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
-        searchPhoneField = new JTextField("Teléfono (10 dígitos)");
+        searchPhoneField = new JTextField("Telefono (10 digitos)");
         searchPhoneField.setFont(new Font("SansSerif", Font.PLAIN, 12));
         searchPhoneField.setForeground(TEXT2);
         searchPhoneField.setBorder(BorderFactory.createCompoundBorder(
@@ -268,7 +276,7 @@ public class OperatorView extends JFrame {
         searchRow.add(searchClientBtn,  BorderLayout.EAST);
         searchCard.add(searchRow);
 
-        // Client info card (hidden until client found)
+        // Client info card
         clientInfoPanel = new JPanel();
         clientInfoPanel.setLayout(new BoxLayout(clientInfoPanel, BoxLayout.Y_AXIS));
         clientInfoPanel.setBackground(BG);
@@ -277,22 +285,22 @@ public class OperatorView extends JFrame {
         clientInfoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         clientInfoPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 130));
 
-        clientNameLabel = new JLabel("—");
+        clientNameLabel = new JLabel("--");
         clientNameLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
         clientNameLabel.setForeground(TEXT);
+        clientNameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        clientAddressLabel = new JLabel("—");
+        clientAddressLabel = new JLabel("--");
         clientAddressLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
         clientAddressLabel.setForeground(TEXT2);
         clientAddressLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        clientPhoneLabel = new JLabel("—");
+        clientPhoneLabel = new JLabel("--");
         clientPhoneLabel.setFont(new Font("SansSerif", Font.PLAIN, 11));
         clientPhoneLabel.setForeground(TEXT3);
         clientPhoneLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // FIX: etiqueta de tipo de cliente (Premium / Estándar)
-        clientTipoLabel = new JLabel("—");
+        clientTipoLabel = new JLabel("--");
         clientTipoLabel.setFont(new Font("SansSerif", Font.BOLD, 11));
         clientTipoLabel.setForeground(BLUE);
         clientTipoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -306,17 +314,15 @@ public class OperatorView extends JFrame {
         clientInfoPanel.add(clientTipoLabel);
         clientInfoPanel.setVisible(false);
 
-        // Frequent orders (hidden until loaded)
+        // Frequent orders
         frequentOrdersSection = new JPanel();
         frequentOrdersSection.setLayout(new BoxLayout(frequentOrdersSection, BoxLayout.Y_AXIS));
         frequentOrdersSection.setOpaque(false);
         frequentOrdersSection.setAlignmentX(Component.LEFT_ALIGNMENT);
-
         JLabel freqLabel = secLabel("Pedidos frecuentes");
         freqLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         frequentOrdersSection.add(freqLabel);
         frequentOrdersSection.add(Box.createVerticalStrut(6));
-
         frequentOrdersListPanel = new JPanel();
         frequentOrdersListPanel.setLayout(new BoxLayout(frequentOrdersListPanel, BoxLayout.Y_AXIS));
         frequentOrdersListPanel.setOpaque(false);
@@ -324,34 +330,60 @@ public class OperatorView extends JFrame {
         frequentOrdersSection.add(frequentOrdersListPanel);
         frequentOrdersSection.setVisible(false);
 
-        left.add(searchCard);
-        left.add(Box.createVerticalStrut(10));
-        left.add(clientInfoPanel);
-        left.add(Box.createVerticalStrut(10));
-        left.add(frequentOrdersSection);
-        left.add(Box.createVerticalGlue());
+        top.add(searchCard);
+        top.add(Box.createVerticalStrut(10));
+        top.add(clientInfoPanel);
+        top.add(Box.createVerticalStrut(10));
+        top.add(frequentOrdersSection);
 
-        JScrollPane scroll = new JScrollPane(left);
-        scroll.setBorder(null);
-        scroll.getViewport().setBackground(BG2);
-        scroll.setPreferredSize(new Dimension(272, 0));
-        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        return scroll;
+        // ── Parte inferior: botones de accion siempre visibles ────────────────
+        clearInvoiceOrderBtn = smallBtn("Limpiar factura", BG, TEXT);
+
+        sendToKitchenBtn = new JButton("Enviar a cocina");
+        sendToKitchenBtn.setFont(new Font("SansSerif", Font.BOLD, 13));
+        sendToKitchenBtn.setBackground(GREEN);
+        sendToKitchenBtn.setForeground(Color.WHITE);
+        sendToKitchenBtn.setOpaque(true);
+        sendToKitchenBtn.setBorderPainted(false);
+        sendToKitchenBtn.setFocusPainted(false);
+        sendToKitchenBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        JPanel actionPanel = new JPanel();
+        actionPanel.setLayout(new BoxLayout(actionPanel, BoxLayout.Y_AXIS));
+        actionPanel.setBackground(BG);
+        actionPanel.setBorder(BorderFactory.createCompoundBorder(
+                new MatteBorder(1, 0, 0, 0, BORDER_C),
+                new EmptyBorder(12, 14, 12, 14)));
+
+        sendToKitchenBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        sendToKitchenBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        clearInvoiceOrderBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        clearInvoiceOrderBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+
+        actionPanel.add(sendToKitchenBtn);
+        actionPanel.add(Box.createVerticalStrut(8));
+        actionPanel.add(clearInvoiceOrderBtn);
+
+        left.add(top,         BorderLayout.NORTH);
+        left.add(actionPanel, BorderLayout.SOUTH);
+        return left;
     }
 
-    // FIX: ahora lee también la columna "Tipo" (índice 3) del clientTableModel
     private void refreshClientCard() {
         if (clientTableModel == null || clientTableModel.getRowCount() == 0) {
             clientInfoPanel.setVisible(false);
             return;
         }
-        String name  = String.valueOf(clientTableModel.getValueAt(0, 0));
-        String phone = String.valueOf(clientTableModel.getValueAt(0, 2));
-        String tipo  = clientTableModel.getColumnCount() > 3
+        String name      = String.valueOf(clientTableModel.getValueAt(0, 0));
+        String phone     = String.valueOf(clientTableModel.getValueAt(0, 2));
+        String tipo      = clientTableModel.getColumnCount() > 3
                 ? String.valueOf(clientTableModel.getValueAt(0, 3)) : "";
+        String cuadrante = clientTableModel.getColumnCount() > 4
+                ? String.valueOf(clientTableModel.getValueAt(0, 4)) : "";
 
         clientNameLabel.setText(name);
         clientPhoneLabel.setText(phone);
+        clientAddressLabel.setText(!cuadrante.isBlank() && !cuadrante.equals("null") ? cuadrante : "--");
 
         if (!tipo.isBlank() && !tipo.equals("null")) {
             clientTipoLabel.setText(tipo);
@@ -383,7 +415,7 @@ public class OperatorView extends JFrame {
             row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
             row.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-            JLabel idLabel = new JLabel(id + "  ·  " + items + " ítem(s)");
+            JLabel idLabel = new JLabel(id + "  ·  " + items + " item(s)");
             idLabel.setFont(new Font("SansSerif", Font.PLAIN, 11));
             idLabel.setForeground(TEXT2);
 
@@ -402,36 +434,28 @@ public class OperatorView extends JFrame {
 
     // ─────────────────────────────────────────────────────────────────────────
     // RIGHT PANEL
+    // BorderLayout: menu (NORTH), pedido (CENTER), factura (SOUTH)
+    // Cada zona se estira con la ventana — sin scroll externo.
     // ─────────────────────────────────────────────────────────────────────────
 
-    private JScrollPane buildRightPanel(Function<String, Void> onSearch) {
-        JPanel right = new JPanel();
-        right.setLayout(new BoxLayout(right, BoxLayout.Y_AXIS));
+    private JPanel buildRightPanel(Function<String, Void> onSearch) {
+        JPanel right = new JPanel(new BorderLayout(0, 10));
         right.setBackground(BG2);
 
-        right.add(buildProductsCard(onSearch));
-        right.add(Box.createVerticalStrut(10));
-        right.add(buildOrderCard());
-        right.add(Box.createVerticalStrut(10));
-        right.add(buildInvoiceCard());
-        right.add(Box.createVerticalGlue());
+        right.add(buildProductsCard(onSearch), BorderLayout.NORTH);
+        right.add(buildOrderCard(),            BorderLayout.CENTER);
+        right.add(buildInvoiceCard(),          BorderLayout.SOUTH);
 
-        JScrollPane scroll = new JScrollPane(right);
-        scroll.setBorder(null);
-        scroll.getViewport().setBackground(BG2);
-        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        return scroll;
+        return right;
     }
 
     private JPanel buildProductsCard(Function<String, Void> onSearch) {
         JPanel card = sectionCard();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setLayout(new BorderLayout(0, 8));
 
         JPanel header = new JPanel(new BorderLayout(10, 0));
         header.setOpaque(false);
-        header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
-        header.setAlignmentX(Component.LEFT_ALIGNMENT);
-        header.add(secLabel("Menú"), BorderLayout.WEST);
+        header.add(secLabel("Menu"), BorderLayout.WEST);
 
         searchProductField = new JTextField("Buscar producto...");
         searchProductField.setFont(new Font("SansSerif", Font.PLAIN, 12));
@@ -439,11 +463,9 @@ public class OperatorView extends JFrame {
         searchProductField.setBorder(BorderFactory.createCompoundBorder(
                 new LineBorder(BORDER_C), new EmptyBorder(4, 8, 4, 8)));
         searchProductField.setPreferredSize(new Dimension(160, 28));
-        searchProductField.setMaximumSize(new Dimension(180, 28));
 
         searchProductBtn = smallBtn("Buscar", BG, TEXT);
         searchProductBtn.addActionListener(e -> onSearch.apply(searchProductField.getText().trim()));
-
         loadProductsBtn = smallBtn("Cargar productos", BLUE, Color.WHITE);
 
         JPanel searchRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
@@ -454,110 +476,145 @@ public class OperatorView extends JFrame {
         header.add(searchRow, BorderLayout.EAST);
 
         productsTable = styledTable(productsTableModel);
-        JScrollPane scroll = tableScroll(productsTable, 200);
-        scroll.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JScrollPane scroll = new JScrollPane(productsTable);
+        scroll.setBorder(new MatteBorder(1, 0, 0, 0, BORDER_C));
+        scroll.getViewport().setBackground(BG);
+        scroll.setPreferredSize(new Dimension(0, 200));
 
-        card.add(header);
-        card.add(Box.createVerticalStrut(10));
-        card.add(scroll);
-
-        // Ayuda UX: doble clic muestra precio antes de agregar
         JLabel hint = new JLabel("  Doble clic en un producto para agregarlo al pedido");
         hint.setFont(new Font("SansSerif", Font.ITALIC, 11));
         hint.setForeground(TEXT3);
-        hint.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.add(Box.createVerticalStrut(4));
-        card.add(hint);
 
+        JPanel south = new JPanel(new BorderLayout());
+        south.setOpaque(false);
+        south.add(hint, BorderLayout.WEST);
+
+        card.add(header, BorderLayout.NORTH);
+        card.add(scroll, BorderLayout.CENTER);
+        card.add(south,  BorderLayout.SOUTH);
         return card;
     }
 
     private JPanel buildOrderCard() {
         JPanel card = sectionCard();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setLayout(new BorderLayout(0, 8));
 
-        card.add(secLabel("Pedido actual"));
-        card.add(Box.createVerticalStrut(10));
+        JPanel topRow = new JPanel(new BorderLayout(8, 0));
+        topRow.setOpaque(false);
+        topRow.add(secLabel("Pedido actual"), BorderLayout.WEST);
+
+        JPanel cuadRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        cuadRow.setOpaque(false);
+        JLabel cuadLbl = new JLabel("Cuadrante destino:");
+        cuadLbl.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        cuadLbl.setForeground(TEXT2);
+        cuadranteSelector = new JComboBox<>(new String[]{"-- Seleccionar --"});
+        cuadranteSelector.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        cuadRow.add(cuadLbl);
+        cuadRow.add(cuadranteSelector);
+        topRow.add(cuadRow, BorderLayout.EAST);
 
         currentOrderTable = styledTable(currentOrderModel);
-        JScrollPane scroll = tableScroll(currentOrderTable, 150);
-        scroll.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.add(scroll);
-        card.add(Box.createVerticalStrut(10));
+        currentOrderTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        removeProductBtn   = smallBtn("Quitar",           BG, TEXT);
-        changeQuantityBtn  = smallBtn("Cambiar cantidad",  BG, TEXT);
-        clearOrderBtn      = smallBtn("Limpiar pedido",    BG, TEXT);
-        generateInvoiceBtn = smallBtn("Generar factura",   BLUE, Color.WHITE);
+        // FIX 1: guardar última fila seleccionada antes de que el foco se pierda
+        currentOrderTable.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                int sel = currentOrderTable.getSelectedRow();
+                if (sel >= 0) lastSelectedOrderRow = sel;
+            }
+        });
 
-        JPanel btns = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        JScrollPane scroll = new JScrollPane(currentOrderTable);
+        scroll.setBorder(new MatteBorder(1, 0, 0, 0, BORDER_C));
+        scroll.getViewport().setBackground(BG);
+
+        removeProductBtn  = smallBtn("Quitar",           BG, TEXT);
+        changeQuantityBtn = smallBtn("Cambiar cantidad",  BG, TEXT);
+        clearOrderBtn     = smallBtn("Limpiar pedido",    BG, TEXT);
+        generateInvoiceBtn= smallBtn("Generar factura",   BLUE, Color.WHITE);
+
+        JLabel selectHint = new JLabel("  Selecciona una fila para quitar o cambiar cantidad");
+        selectHint.setFont(new Font("SansSerif", Font.ITALIC, 11));
+        selectHint.setForeground(TEXT3);
+
+        // FIX 2: total en tiempo real
+        orderTotalLabel = new JLabel("Total: $0");
+        orderTotalLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
+        orderTotalLabel.setForeground(BLUE);
+
+        JPanel btnsLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        btnsLeft.setOpaque(false);
+        btnsLeft.add(removeProductBtn);
+        btnsLeft.add(changeQuantityBtn);
+        btnsLeft.add(clearOrderBtn);
+        btnsLeft.add(generateInvoiceBtn);
+        btnsLeft.add(selectHint);
+
+        JPanel btnsRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        btnsRight.setOpaque(false);
+        btnsRight.add(orderTotalLabel);
+
+        JPanel btns = new JPanel(new BorderLayout());
         btns.setOpaque(false);
-        btns.setAlignmentX(Component.LEFT_ALIGNMENT);
-        btns.add(removeProductBtn);
-        btns.add(changeQuantityBtn);
-        btns.add(clearOrderBtn);
-        btns.add(generateInvoiceBtn);
-        card.add(btns);
+        btns.add(btnsLeft,  BorderLayout.CENTER);
+        btns.add(btnsRight, BorderLayout.EAST);
+
+        card.add(topRow, BorderLayout.NORTH);
+        card.add(scroll, BorderLayout.CENTER);
+        card.add(btns,   BorderLayout.SOUTH);
         return card;
     }
 
     private JPanel buildInvoiceCard() {
         JPanel card = sectionCard();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setLayout(new BorderLayout(12, 0));
 
-        card.add(secLabel("Factura"));
-        card.add(Box.createVerticalStrut(12));
+        // Columna izquierda: datos del cliente + totales
+        JPanel dataCol = new JPanel();
+        dataCol.setLayout(new BoxLayout(dataCol, BoxLayout.Y_AXIS));
+        dataCol.setOpaque(false);
+        dataCol.setPreferredSize(new Dimension(220, 0));
 
-        invoiceClientVal    = new JLabel("—");
-        invoiceTipoVal      = new JLabel("—");
-        invoiceDireccionVal = new JLabel("—");
-        invoiceCuadranteVal = new JLabel("—");
+        dataCol.add(secLabel("Factura"));
+        dataCol.add(Box.createVerticalStrut(10));
+
+        invoiceClientVal    = new JLabel("--");
+        invoiceTipoVal      = new JLabel("--");
+        invoiceDireccionVal = new JLabel("--");
+        invoiceCuadranteVal = new JLabel("--");
         invoiceSubtotalVal  = new JLabel("$0");
         invoiceIvaVal       = new JLabel("$0");
         invoiceDomicilioVal = new JLabel("$0");
         invoiceTotalVal     = new JLabel("$0");
 
-        card.add(invRow("Cliente",   invoiceClientVal));
-        card.add(Box.createVerticalStrut(4));
-        card.add(invRow("Tipo",      invoiceTipoVal));
-        card.add(Box.createVerticalStrut(4));
-        card.add(invRow("Dirección", invoiceDireccionVal));
-        card.add(Box.createVerticalStrut(4));
-        card.add(invRow("Cuadrante", invoiceCuadranteVal));
-        card.add(Box.createVerticalStrut(10));
-        card.add(hLine());
-        card.add(Box.createVerticalStrut(10));
-        card.add(invRow("Subtotal",  invoiceSubtotalVal));
-        card.add(Box.createVerticalStrut(4));
-        card.add(invRow("IVA (19%)", invoiceIvaVal));
-        card.add(Box.createVerticalStrut(4));
-        card.add(invRow("Domicilio", invoiceDomicilioVal));
-        card.add(Box.createVerticalStrut(8));
-        card.add(invTotalRow());
-        card.add(Box.createVerticalStrut(12));
+        dataCol.add(invRow("Cliente",   invoiceClientVal));
+        dataCol.add(Box.createVerticalStrut(4));
+        dataCol.add(invRow("Tipo",      invoiceTipoVal));
+        dataCol.add(Box.createVerticalStrut(4));
+        dataCol.add(invRow("Direccion", invoiceDireccionVal));
+        dataCol.add(Box.createVerticalStrut(4));
+        dataCol.add(invRow("Cuadrante", invoiceCuadranteVal));
+        dataCol.add(Box.createVerticalStrut(8));
+        dataCol.add(hLine());
+        dataCol.add(Box.createVerticalStrut(8));
+        dataCol.add(invRow("Subtotal",  invoiceSubtotalVal));
+        dataCol.add(Box.createVerticalStrut(4));
+        dataCol.add(invRow("IVA (19%)", invoiceIvaVal));
+        dataCol.add(Box.createVerticalStrut(4));
+        dataCol.add(invRow("Domicilio", invoiceDomicilioVal));
+        dataCol.add(Box.createVerticalStrut(6));
+        dataCol.add(invTotalRow());
 
+        // Centro: tabla de items de la factura
         invoiceOrderTable = styledTable(invoiceOrderModel);
-        JScrollPane invScroll = tableScroll(invoiceOrderTable, 110);
-        invScroll.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.add(invScroll);
-        card.add(Box.createVerticalStrut(12));
+        JScrollPane invScroll = new JScrollPane(invoiceOrderTable);
+        invScroll.setBorder(new MatteBorder(1, 0, 0, 0, BORDER_C));
+        invScroll.getViewport().setBackground(BG);
+        invScroll.setPreferredSize(new Dimension(0, 160));
 
-        clearInvoiceOrderBtn = smallBtn("Limpiar factura", BG, TEXT);
-        sendToKitchenBtn = new JButton("Enviar a cocina");
-        sendToKitchenBtn.setFont(new Font("SansSerif", Font.BOLD, 13));
-        sendToKitchenBtn.setBackground(GREEN);
-        sendToKitchenBtn.setForeground(Color.WHITE);
-        sendToKitchenBtn.setOpaque(true);
-        sendToKitchenBtn.setBorderPainted(false);
-        sendToKitchenBtn.setFocusPainted(false);
-        sendToKitchenBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        JPanel sendRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        sendRow.setOpaque(false);
-        sendRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        sendRow.add(clearInvoiceOrderBtn);
-        sendRow.add(sendToKitchenBtn);
-        card.add(sendRow);
+        card.add(dataCol,   BorderLayout.WEST);
+        card.add(invScroll, BorderLayout.CENTER);
         return card;
     }
 
@@ -674,15 +731,6 @@ public class OperatorView extends JFrame {
         return table;
     }
 
-    private JScrollPane tableScroll(JTable table, int height) {
-        JScrollPane scroll = new JScrollPane(table);
-        scroll.setBorder(new MatteBorder(1, 0, 0, 0, BORDER_C));
-        scroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, height));
-        scroll.setPreferredSize(new Dimension(0, height));
-        scroll.getViewport().setBackground(BG);
-        return scroll;
-    }
-
     // ─────────────────────────────────────────────────────────────────────────
     // PUBLIC API
     // ─────────────────────────────────────────────────────────────────────────
@@ -714,30 +762,92 @@ public class OperatorView extends JFrame {
     public DefaultTableModel getProductsTableModel()               { return productsTableModel; }
     public JTable            getProductsTable()                    { return productsTable; }
     public DefaultTableModel getCurrentOrderModel()                { return currentOrderModel; }
-    public int               getSelectedCurrentOrderRow()          { return currentOrderTable != null ? currentOrderTable.getSelectedRow() : -1; }
+
+    public int getSelectedCurrentOrderRow() {
+        if (currentOrderTable == null) return -1;
+        int live = currentOrderTable.getSelectedRow();
+        return live >= 0 ? live : lastSelectedOrderRow;
+    }
+
+    public void clearOrderSelection() {
+        lastSelectedOrderRow = -1;
+    }
+
+    public void setOrderTotal(String total) {
+        SwingUtilities.invokeLater(() -> {
+            if (orderTotalLabel != null) orderTotalLabel.setText("Total: " + total);
+        });
+    }
+
     public int               getSelectedProductRow()               { return productsTable != null ? productsTable.getSelectedRow() : -1; }
     public void              addGenerateInvoiceListener(Runnable r){ generateInvoiceBtn.addActionListener(e -> r.run()); }
     public void              addRemoveProductListener(Runnable r)  { removeProductBtn.addActionListener(e -> r.run()); }
     public void              addChangeQuantityListener(Runnable r) { changeQuantityBtn.addActionListener(e -> r.run()); }
     public void              addClearOrderListener(Runnable r)     { clearOrderBtn.addActionListener(e -> r.run()); }
 
+
+    public int promptNewQuantity(int currentQuantity) {
+        String input = JOptionPane.showInputDialog(
+                this,
+                "Nueva cantidad (actual: " + currentQuantity + "):",
+                "Cambiar cantidad",
+                JOptionPane.PLAIN_MESSAGE
+        );
+        if (input == null || input.isBlank()) return -1;
+        try {
+            int qty = Integer.parseInt(input.trim());
+            return qty > 0 ? qty : -1;
+        } catch (NumberFormatException ex) {
+            showError("Ingresa un numero entero valido mayor que 0.");
+            return -1;
+        }
+    }
+
     // Tab 3
-    public void              setInvoiceClient(String v)             { SwingUtilities.invokeLater(() -> invoiceClientVal.setText(v)); }
-    public void              setInvoiceTipo(String v)               { SwingUtilities.invokeLater(() -> invoiceTipoVal.setText(v)); }
-    public void              setInvoiceDireccion(String v)          { SwingUtilities.invokeLater(() -> invoiceDireccionVal.setText(v)); }
-    public void              setInvoiceCuadrante(String v)          { SwingUtilities.invokeLater(() -> invoiceCuadranteVal.setText(v)); }
-    public void              setInvoiceSubtotal(String v)           { SwingUtilities.invokeLater(() -> invoiceSubtotalVal.setText(v)); }
-    public void              setInvoiceIva(String v)                { SwingUtilities.invokeLater(() -> invoiceIvaVal.setText(v)); }
-    public void              setInvoiceDomicilio(String v)          { SwingUtilities.invokeLater(() -> invoiceDomicilioVal.setText(v)); }
-    public void              setInvoiceTotal(String v)              { SwingUtilities.invokeLater(() -> invoiceTotalVal.setText(v)); }
-    public DefaultTableModel getInvoiceOrderModel()                 { return invoiceOrderModel; }
+    public void              setInvoiceClient(String v)              { SwingUtilities.invokeLater(() -> invoiceClientVal.setText(v)); }
+    public void              setInvoiceTipo(String v)                { SwingUtilities.invokeLater(() -> invoiceTipoVal.setText(v)); }
+    public void              setInvoiceDireccion(String v)           { SwingUtilities.invokeLater(() -> invoiceDireccionVal.setText(v)); }
+    public void              setInvoiceCuadrante(String v)           { SwingUtilities.invokeLater(() -> invoiceCuadranteVal.setText(v)); }
+    public void              setInvoiceSubtotal(String v)            { SwingUtilities.invokeLater(() -> invoiceSubtotalVal.setText(v)); }
+    public void              setInvoiceIva(String v)                 { SwingUtilities.invokeLater(() -> invoiceIvaVal.setText(v)); }
+    public void              setInvoiceDomicilio(String v)           { SwingUtilities.invokeLater(() -> invoiceDomicilioVal.setText(v)); }
+    public void              setInvoiceTotal(String v)               { SwingUtilities.invokeLater(() -> invoiceTotalVal.setText(v)); }
+    public DefaultTableModel getInvoiceOrderModel()                  { return invoiceOrderModel; }
     public void              addClearInvoiceOrderListener(Runnable r){ clearInvoiceOrderBtn.addActionListener(e -> r.run()); }
-    public void              addSendToKitchenListener(Runnable r)   { sendToKitchenBtn.addActionListener(e -> r.run()); }
+    public void              addSendToKitchenListener(Runnable r)    { sendToKitchenBtn.addActionListener(e -> r.run()); }
 
     // Navigation / shared
     public void addLogoutListener(Runnable r) { logoutBtn.addActionListener(e -> r.run()); }
     public void showTab(int index)            { SwingUtilities.invokeLater(() -> applyStepStyle(index)); }
-    public void showError(String msg)         { JOptionPane.showMessageDialog(this, msg, "Error",  JOptionPane.ERROR_MESSAGE); }
-    public void showSuccess(String msg)       { JOptionPane.showMessageDialog(this, msg, "Éxito",  JOptionPane.INFORMATION_MESSAGE); }
+    public void showError(String msg)         { JOptionPane.showMessageDialog(this, msg, "Error",       JOptionPane.ERROR_MESSAGE); }
+    public void showSuccess(String msg)       { JOptionPane.showMessageDialog(this, msg, "Exito",       JOptionPane.INFORMATION_MESSAGE); }
     public boolean confirm(String msg)        { return JOptionPane.showConfirmDialog(this, msg, "Confirmar", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION; }
+
+    public void setCuadrantesDisponibles(String[] nombres) {
+        SwingUtilities.invokeLater(() -> {
+            if (cuadranteSelector == null) return;
+            cuadranteSelector.removeAllItems();
+            cuadranteSelector.addItem("-- Seleccionar --");
+            for (String nombre : nombres) cuadranteSelector.addItem(nombre);
+        });
+    }
+
+    public String getSelectedCuadrante() {
+        if (cuadranteSelector == null) return null;
+        Object sel = cuadranteSelector.getSelectedItem();
+        if (sel == null || sel.toString().startsWith("--")) return null;
+        return sel.toString();
+    }
+
+    public void setSelectedCuadrante(String nombre) {
+        SwingUtilities.invokeLater(() -> {
+            if (cuadranteSelector == null) return;
+            for (int i = 0; i < cuadranteSelector.getItemCount(); i++) {
+                if (nombre.equals(cuadranteSelector.getItemAt(i))) {
+                    cuadranteSelector.setSelectedIndex(i);
+                    return;
+                }
+            }
+        });
+    }
 }

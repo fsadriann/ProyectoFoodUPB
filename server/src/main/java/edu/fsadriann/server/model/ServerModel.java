@@ -44,8 +44,8 @@ public class ServerModel {
             System.setProperty("java.rmi.server.hostname", ip);
 
             cuadranteService = new CuadranteService();
-            deliveryService  = new DeliveryService(cuadranteService);
-            orderService = new OrderService();
+            orderService = new OrderService(cuadranteService);
+            deliveryService = new DeliveryService(cuadranteService, orderService);
             userService = new UserService(orderService);
             productService = new ProductService();
             kitchenService = new KitchenService(orderService);
@@ -53,18 +53,17 @@ public class ServerModel {
 
             try {
                 registry = LocateRegistry.getRegistry(port);
-                // Intentar listar para comprobar conexión
                 registry.list();
                 System.out.println("Servidor RMI ya activo, reutilizando instancia...");
                 createdRegistry = false;
             } catch (Exception ex) {
-                // No hay registry accesible -> crear uno nuevo
                 registry = LocateRegistry.createRegistry(port);
                 createdRegistry = true;
                 System.out.println("Servidor RMI iniciado correctamente en " + ip + ":" + port);
             }
 
             bindService("-cuadrantes", cuadranteService);
+            bindService("-delivery", deliveryService);
             bindService("-users", userService);
             bindService("-products", productService);
             bindService("-orders", orderService);
@@ -78,17 +77,18 @@ public class ServerModel {
             return false;
         }
     }
-
     public boolean stop() {
         try {
             Naming.unbind(uri + "-cuadrantes");
             Naming.unbind(uri + "-users");
+            Naming.unbind(uri + "-delivery");
             Naming.unbind(uri + "-products");
             Naming.unbind(uri + "-orders");
             Naming.unbind(uri + "-kitchen");
             Naming.unbind(uri + "-admin");
 
             if (cuadranteService != null) UnicastRemoteObject.unexportObject(cuadranteService, true);
+            if (deliveryService != null) UnicastRemoteObject.unexportObject(deliveryService, true);
             if (userService != null) UnicastRemoteObject.unexportObject(userService, true);
             if (productService != null) UnicastRemoteObject.unexportObject(productService, true);
             if (orderService != null) UnicastRemoteObject.unexportObject(orderService, true);

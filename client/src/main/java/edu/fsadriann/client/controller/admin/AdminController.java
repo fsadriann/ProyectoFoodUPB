@@ -12,6 +12,8 @@ import edu.fsadriann.server.model.product.Product;
 
 public class AdminController {
 
+    private static final double UMBRAL_VECINO_KM = 0.4;
+
     private final ClientModel model;
     private final AdminView   view;
     private boolean initialized;
@@ -25,14 +27,22 @@ public class AdminController {
         if (!initialized) {
             view.addRefreshReportsListener(this::refreshReportes);
             view.addRefreshAuditListener(this::refreshBitacora);
+
+            // Cuadrantes
             view.addOpenCuadFormListener(() -> view.showCuadForm(null, this::handleCreateCuadrante));
-            view.addConnectCuadListener(() -> view.showConnectCuadForm(this::handleConnectCuadrantes));
+            view.addEditCuadListener(this::handleEditCuadrante);
+            view.addDeleteCuadListener(this::handleDeleteCuadrante);
+
+            // Usuarios
             view.addOpenUserFormListener(() -> view.showUserForm(this::handleCreateUser));
             view.addEditUserListener(this::handleEditUser);
             view.addDeleteUserListener(this::handleDeleteUser);
+
+            // Productos
             view.addOpenProductFormListener(() -> view.showProductForm(null, this::handleCreateProduct));
             view.addEditProductListener(this::handleEditProduct);
             view.addToggleProductListener(this::handleToggleProduct);
+
             initialized = true;
         }
         if (model.isConnected()) {
@@ -45,13 +55,127 @@ public class AdminController {
         }
     }
 
-    // ── Crear ─────────────────────────────────────────────────────────────────
+    // ── Cuadrantes ────────────────────────────────────────────────────────────
+
+    private void handleCreateCuadrante(String[] data) {
+        // data: [nombre, descripcion, distanciaKm]
+        double distanciaDesdeUPB = 0;
+        try { distanciaDesdeUPB = Double.parseDouble(data[2]); }
+        catch (Exception ignored) {}
+
+        Cuadrante nuevo = new Cuadrante(data[0], data[1], distanciaDesdeUPB);
+        boolean ok = model.agregarCuadrante(nuevo);
+        if (!ok) { view.setMessage("No se pudo agregar el cuadrante (ya existe)."); return; }
+
+        StringBuilder msg = new StringBuilder("Cuadrante '" + data[0] + "' agregado.");
+
+        // Conectar automáticamente a UPB
+        if (distanciaDesdeUPB > 0) {
+            boolean conectadoUPB = model.conectarCuadrantes("UPB", data[0], distanciaDesdeUPB);
+            if (conectadoUPB) msg.append(" Conectado a UPB (").append(data[2]).append(" km).");
+        }
+
+        // Auto-conectar a nodos vecinos con distancia similar
+        LinkedList<Cuadrante> existentes = model.listarCuadrantes();
+        edu.fsadriann.model.iterator.Iterator<Cuadrante> it = existentes.iterator();
+        int autoConexiones = 0;
+        while (it.hasNext()) {
+            Cuadrante otro = it.next();
+            if (otro == null) continue;
+            if (otro.getNombre().equals(data[0])) continue;
+            if ("UPB".equals(otro.getNombre())) continue;
+
+            double distOtro       = otro.getDistanciaDesdeUPB();
+            double distEntreNodos = Math.abs(distanciaDesdeUPB - distOtro);
+
+            if (distEntreNodos <= UMBRAL_VECINO_KM) {
+                boolean conectado = model.conectarCuadrantes(
+                        data[0], otro.getNombre(), Math.max(distEntreNodos, 0.05));
+                if (conectado) autoConexiones++;
+            }
+        }
+
+        if (autoConexiones > 0)
+            msg.append(" Auto-conectado a ").append(autoConexiones).append(" nodo(s) vecino(s).");
+
+        refreshCuadrantes();
+        view.setMessage(msg.toString());
+    }
+
+    private void handleEditCuadrante() {
+        String nombre = view.getSelectedCuadNombre();
+        if (nombre == null) return;
+
+        Cuadrante selected = findCuadrante(nombre);
+        if (selected == null) { view.setMessage("No se encontró el cuadrante."); return; }
+
+        view.showCuadForm(
+                new String[]{
+                        selected.getNombre(),
+                        selected.getDescripcion() != null ? selected.getDescripcion() : "",
+                        String.valueOf(selected.getDistanciaDesdeUPB())
+                },
+                data -> {
+                    double nuevaDist = 0;
+                    try { nuevaDist = Double.parseDouble(data[2]); }
+                    catch (Exception ignored) {}
+
+                    Cuadrante actualizado = new Cuadrante(data[0], data[1], nuevaDist);
+                    boolean ok = model.editarCuadrante(actualizado);
+                    if (!ok) { view.setMessage("No se pudo editar el cuadrante."); return; }
+
+                    // Actualizar conexión a UPB si cambió la distancia
+                    if (nuevaDist > 0 && nuevaDist != selected.getDistanciaDesdeUPB()) {
+                        model.conectarCuadrantes("UPB", data[0], nuevaDist);
+                    }
+
+                    refreshCuadrantes();
+                    view.setMessage("Cuadrante '" + data[0] + "' actualizado.");
+                }
+        );
+    }
+
+    private void handleDeleteCuadrante() {
+        String nombre = view.getSelectedCuadNombre();
+        if (nombre == null) return;
+
+        int confirm = javax.swing.JOptionPane.showConfirmDialog(
+                view.getFrame(),
+                "¿Eliminar el cuadrante '" + nombre + "'?\nEsta acción no se puede deshacer.",
+                "Confirmar eliminación",
+                javax.swing.JOptionPane.YES_NO_OPTION,
+                javax.swing.JOptionPane.WARNING_MESSAGE
+        );
+        if (confirm != javax.swing.JOptionPane.YES_OPTION) return;
+
+        boolean ok = model.eliminarCuadrante(nombre);
+        if (!ok) { view.setMessage("No se pudo eliminar el cuadrante."); return; }
+
+        refreshCuadrantes();
+        view.setMessage("Cuadrante '" + nombre + "' eliminado.");
+    }
+
+    private void refreshCuadrantes() {
+        LinkedList<Cuadrante> cuadrantes = model.listarCuadrantes();
+        view.setCuadrantes(cuadrantes);
+    }
+
+    private Cuadrante findCuadrante(String nombre) {
+        LinkedList<Cuadrante> lista = model.listarCuadrantes();
+        edu.fsadriann.model.iterator.Iterator<Cuadrante> it = lista.iterator();
+        while (it.hasNext()) {
+            Cuadrante c = it.next();
+            if (c != null && c.getNombre().equals(nombre)) return c;
+        }
+        return null;
+    }
+
+    // ── Reportes ──────────────────────────────────────────────────────────────
 
     private void refreshReportes() {
         LinkedList<Order> pedidos = model.getPedidosTodos();
         view.setReportePedidos(pedidos);
 
-        // calcular métricas
         int total = 0, enCocina = 0, entregados = 0;
         double ingresos = 0;
         edu.fsadriann.model.iterator.Iterator<Order> it = pedidos.iterator();
@@ -60,7 +184,7 @@ public class AdminController {
             if (o == null) continue;
             total++;
             if (o.getEstado() == edu.fsadriann.server.model.order.EstadoPedido.EN_PREPARACION) enCocina++;
-            if (o.getEstado() == edu.fsadriann.server.model.order.EstadoPedido.ENTREGADO) entregados++;
+            if (o.getEstado() == edu.fsadriann.server.model.order.EstadoPedido.ENTREGADO)      entregados++;
             if (o.getTotal() > 0) ingresos += o.getTotal();
         }
 
@@ -75,37 +199,12 @@ public class AdminController {
         view.setBitacora(eventos);
     }
 
-    private void handleCreateCuadrante(String[] data) {
-        double lat = 0, lng = 0;
-        try { if (!data[2].isBlank()) lat = Double.parseDouble(data[2]); } catch (Exception ignored) {}
-        try { if (!data[3].isBlank()) lng = Double.parseDouble(data[3]); } catch (Exception ignored) {}
-
-        Cuadrante c = new Cuadrante(data[0], data[1], lat, lng);
-        boolean ok = model.agregarCuadrante(c);
-        if (!ok) { view.setMessage("No se pudo agregar el cuadrante (ya existe)."); return; }
-
-        refreshCuadrantes();
-        view.setMessage("Cuadrante agregado correctamente.");
-    }
-
-    private void handleConnectCuadrantes(String[] data) {
-        double distancia = Double.parseDouble(data[2]);
-        boolean ok = model.conectarCuadrantes(data[0], data[1], distancia);
-        if (!ok) { view.setMessage("No se pudieron conectar los cuadrantes."); return; }
-
-        view.setMessage("Cuadrantes " + data[0] + " ↔ " + data[1] + " conectados.");
-    }
-
-    private void refreshCuadrantes() {
-        LinkedList<Cuadrante> cuadrantes = model.listarCuadrantes();
-        view.setCuadrantes(cuadrantes);
-    }
+    // ── Productos ─────────────────────────────────────────────────────────────
 
     private void handleCreateProduct(String[] data) {
         Product p = new Product(
                 java.util.UUID.randomUUID().toString(),
-                data[0],
-                data[3],
+                data[0], data[3],
                 Integer.parseInt(data[2]),
                 "Sí".equals(data[4])
         );
@@ -135,12 +234,8 @@ public class AdminController {
                 },
                 data -> {
                     Product updated = new Product(
-                            selected.getProductoId(),
-                            data[0],
-                            data[3],
-                            Integer.parseInt(data[2]),
-                            "Sí".equals(data[4])
-                    );
+                            selected.getProductoId(), data[0], data[3],
+                            Integer.parseInt(data[2]), "Sí".equals(data[4]));
                     updated.setDescripcion(data[1]);
                     updated.setDisponible(selected.isDisponible());
 
@@ -165,20 +260,21 @@ public class AdminController {
         view.setMessage(disponibleActual ? "Producto desactivado." : "Producto activado.");
     }
 
+    private void refreshProducts() {
+        LinkedList<Product> products = model.listarProductos();
+        view.setProducts(products);
+    }
+
+    // ── Usuarios ──────────────────────────────────────────────────────────────
+
     private void handleCreateUser(AdminUserFormData data) {
         Rol rol = parseRol(data.getRol());
         if (rol == null) { view.setMessage("Rol inválido."); return; }
 
         User user = new User(
-                data.getCorreo(),
-                data.getNombre(),
-                data.getApellido(),
-                rol,
-                data.getTelefono(),  // cedula = telefono
-                rol == Rol.CLIENTE,
-                data.getTelefono(),
-                data.getDireccionCompleta(),
-                null
+                data.getCorreo(), data.getNombre(), data.getApellido(), rol,
+                data.getTelefono(), rol == Rol.CLIENTE,
+                data.getTelefono(), data.getDireccionCompleta(), null
         );
 
         boolean created = model.registrarUsuario(user, data.getContrasena());
@@ -189,57 +285,33 @@ public class AdminController {
         view.setMessage("Usuario registrado correctamente.");
     }
 
-    // ── Editar ────────────────────────────────────────────────────────────────
-
     private void handleEditUser() {
         String telefono = view.getSelectedUserTelefono();
         if (telefono == null) return;
 
-        // Buscar el usuario actual para prellenar el formulario
         LinkedList<User> users = model.listarUsuarios();
         User selected = null;
         edu.fsadriann.model.iterator.Iterator<User> it = users.iterator();
         while (it.hasNext()) {
             User u = it.next();
-            if (u != null && telefono.equals(u.getTelefono())) {
-                selected = u;
-                break;
-            }
+            if (u != null && telefono.equals(u.getTelefono())) { selected = u; break; }
         }
         if (selected == null) { view.setMessage("No se encontró el usuario."); return; }
 
         final User userToEdit = selected;
         view.showEditUserForm(
-                userToEdit.getNombres(),
-                userToEdit.getApellidos(),
-                userToEdit.getTelefono(),
-                userToEdit.getId(),
+                userToEdit.getNombres(), userToEdit.getApellidos(),
+                userToEdit.getTelefono(), userToEdit.getId(),
                 userToEdit.getRol() != null ? userToEdit.getRol().name() : "CLIENTE",
                 userToEdit.getDireccion() != null ? userToEdit.getDireccion() : "",
                 data -> {
                     Rol rol = parseRol(data.getRol());
                     if (rol == null) { view.setMessage("Rol inválido."); return; }
 
-                    // Contraseña: si dejó vacío, no se cambia
-                    if (!data.getContrasena().isBlank()) {
-                        try {
-                            model.listarUsuarios(); // solo para verificar conexión
-                        } catch (Exception e) {
-                            view.setMessage("Error de conexión.");
-                            return;
-                        }
-                    }
-
                     User updated = new User(
-                            data.getCorreo(),
-                            data.getNombre(),
-                            data.getApellido(),
-                            rol,
-                            userToEdit.getCedula(), // mantiene la cédula original
-                            rol == Rol.CLIENTE,
-                            data.getTelefono(),
-                            data.getDireccionCompleta(),
-                            null
+                            data.getCorreo(), data.getNombre(), data.getApellido(), rol,
+                            userToEdit.getCedula(), rol == Rol.CLIENTE,
+                            data.getTelefono(), data.getDireccionCompleta(), null
                     );
 
                     boolean ok = model.actualizarCliente(updated);
@@ -250,8 +322,6 @@ public class AdminController {
                 }
         );
     }
-
-    // ── Eliminar ──────────────────────────────────────────────────────────────
 
     private void handleDeleteUser() {
         String telefono = view.getSelectedUserTelefono();
@@ -266,16 +336,12 @@ public class AdminController {
         );
         if (confirm != javax.swing.JOptionPane.YES_OPTION) return;
 
-        // Buscar cédula por teléfono
         LinkedList<User> users = model.listarUsuarios();
         String cedula = null;
         edu.fsadriann.model.iterator.Iterator<User> it = users.iterator();
         while (it.hasNext()) {
             User u = it.next();
-            if (u != null && telefono.equals(u.getTelefono())) {
-                cedula = u.getCedula();
-                break;
-            }
+            if (u != null && telefono.equals(u.getTelefono())) { cedula = u.getCedula(); break; }
         }
         if (cedula == null) { view.setMessage("No se encontró el usuario."); return; }
 
@@ -287,28 +353,16 @@ public class AdminController {
         view.setMessage("Usuario eliminado correctamente.");
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
     private void refreshUsers() {
         LinkedList<User> users = model.listarUsuarios();
         view.setUsers(users);
     }
 
-    private void refreshProducts() {
-        LinkedList<edu.fsadriann.server.model.product.Product> products = model.listarProductos();
-        view.setProducts(products);
-    }
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private Rol parseRol(String rol) {
         if (rol == null) return null;
-        try {
-            return Rol.valueOf(rol.trim().toUpperCase());
-        } catch (IllegalArgumentException ex) {
-            return null;
-        }
+        try { return Rol.valueOf(rol.trim().toUpperCase()); }
+        catch (IllegalArgumentException ex) { return null; }
     }
-
-
-
-
 }

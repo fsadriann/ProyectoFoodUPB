@@ -18,4 +18,6 @@ public interface CuadranteInterface extends Remote {
     int numeroCuadrantes() throws RemoteException;
     int numeroConexiones() throws RemoteException;
     String verMatrizAdyacencia() throws RemoteException;
+    LinkedList<CuadranteRepository.ConexionEntry> listarConexiones() throws RemoteException;
+    boolean eliminarCuadrante(String nombre) throws java.rmi.RemoteException;
 }

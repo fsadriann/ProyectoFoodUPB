@@ -15,15 +15,15 @@ public class KitchenController {
 
     public static class EntradaFogon {
         final String orderId;
-        final Order order;
+        final Order  order;
         final boolean esComplejo;
-        final long startTime;
+        final long    startTime;
 
         public EntradaFogon(Order order, boolean esComplejo) {
-            this.orderId = order.getOrderId();
-            this.order = order;
+            this.orderId    = order.getOrderId();
+            this.order      = order;
             this.esComplejo = esComplejo;
-            this.startTime = System.currentTimeMillis();
+            this.startTime  = System.currentTimeMillis();
         }
 
         @Override
@@ -34,17 +34,15 @@ public class KitchenController {
         }
 
         @Override
-        public int hashCode() {
-            return orderId.hashCode();
-        }
+        public int hashCode() { return orderId.hashCode(); }
     }
 
     private final ClientModel model;
     private final KitchenView view;
 
-    private final LinkedList<String> enqueuedIds = new LinkedList<>();
-    private final LinkedList<String> listosIds   = new LinkedList<>();
-    private final LinkedList<EntradaFogon> enFogones = new LinkedList<>();
+    private final LinkedList<String>      enqueuedIds = new LinkedList<>();
+    private final LinkedList<String>      listosIds   = new LinkedList<>();
+    private final LinkedList<EntradaFogon> enFogones  = new LinkedList<>();
 
     private int  readyTodayCount = 0;
     private long totalPrepMillis = 0;
@@ -53,7 +51,6 @@ public class KitchenController {
     private Timer    refreshTimer;
     private Runnable logoutAction;
 
-    // Constructor sin KitchenService — usa el remoto via ClientModel
     public KitchenController(ClientModel model, KitchenView view) {
         this.model = model;
         this.view  = view;
@@ -71,9 +68,11 @@ public class KitchenController {
         view.setMessage("Cocina activa, actualizacion cada " + (REFRESH_MS / 1000) + " s.");
     }
 
-    public void show() { view.showView(); }
-    public void hide() { view.hideView(); }
+    public void show()                        { view.showView(); }
+    public void hide()                        { view.hideView(); }
     public void setLogoutAction(Runnable action) { this.logoutAction = action; }
+
+    // ── Refresh ───────────────────────────────────────────────────────────────
 
     private void refresh() {
         try {
@@ -90,10 +89,12 @@ public class KitchenController {
 
                 model.encolarPedido(order);
                 enqueuedIds.add(id);
-
                 view.addToQueueFull(id, order);
                 nuevos++;
             }
+
+            // FIX: intentar mover todos los compatibles a fogones disponibles
+            intentarPasarAFogon();
 
             updateMetrics();
             if (nuevos > 0)
@@ -104,23 +105,28 @@ public class KitchenController {
         }
     }
 
+    // ── Procesar siguiente (botón manual) ─────────────────────────────────────
+
     private void handleProcesarSiguiente() {
         if (model.colaVacia()) {
             view.setMessage("No hay pedidos en cola.");
             return;
         }
-
-        Order processed = model.procesarSiguientePedido();
-
-        if (processed == null) {
-            view.setMessage("Fogones ocupados, el pedido espera su fogon compatible.");
-            updateMetrics();
-            return;
-        }
-
-        mostrarPedidoEnFogon(processed);
+        intentarPasarAFogon();
         updateMetrics();
     }
+
+    // ── Mover pedidos compatibles a fogones disponibles ───────────────────────
+
+    private void intentarPasarAFogon() {
+        java.util.List<Order> procesados = model.procesarPedidosDisponibles();
+        for (Order processed : procesados) {
+            if (processed == null) continue;
+            mostrarPedidoEnFogon(processed);
+        }
+    }
+
+    // ── Mostrar pedido en la columna de fogón correspondiente ─────────────────
 
     private void mostrarPedidoEnFogon(Order processed) {
         String  id       = processed.getOrderId();
@@ -132,12 +138,14 @@ public class KitchenController {
 
         if (complejo) {
             view.addToComplejasFull(id, processed, () -> handleMarcarListo(id));
-            view.setMessage("Pedido " + sid + " Fogon Grande B4.");
+            view.setMessage("Pedido " + sid + " → Fogon Grande B4.");
         } else {
             view.addToRapidasFull(id, processed, () -> handleMarcarListo(id));
-            view.setMessage("Pedido " + sid + " Fogon Normal B1/B2/B3.");
+            view.setMessage("Pedido " + sid + " → Fogon Normal B1/B2/B3.");
         }
     }
+
+    // ── Marcar listo ──────────────────────────────────────────────────────────
 
     private void handleMarcarListo(String orderId) {
         EntradaFogon entrada = buscarEnFogones(orderId);
@@ -169,12 +177,25 @@ public class KitchenController {
             view.removeFromRapidas(orderId);
         }
 
-        view.addToListosFull(orderId, sid, buildClientLabel(entrada.order), entrada.order);
-        updateMetrics();
+        view.addToListosFull(orderId, sid, buildClientLabel(entrada.order),
+                entrada.order, () -> handleEnviarAEntrega(orderId));        updateMetrics();
         view.setMessage("Pedido " + sid + " listo para entrega.");
 
-        javax.swing.SwingUtilities.invokeLater(this::refresh);
+        // FIX: al liberar el fogón, mover automáticamente el siguiente compatible
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            intentarPasarAFogon();
+            updateMetrics();
+        });
     }
+
+    private void handleEnviarAEntrega(String orderId) {
+        view.removeFromListos(orderId);
+        listosIds.remove(orderId);
+        updateMetrics();
+        view.setMessage("Pedido " + shortId(orderId) + " listo para el módulo de entregas.");
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private EntradaFogon buscarEnFogones(String orderId) {
         Iterator<EntradaFogon> it = enFogones.iterator();

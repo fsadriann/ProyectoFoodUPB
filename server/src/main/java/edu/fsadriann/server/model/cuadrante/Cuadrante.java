@@ -6,44 +6,41 @@ public class Cuadrante implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private String nombre;
-    private String descripcion;
-    private double latitud;
-    private double longitud;
+    private String  nombre;
+    private String  descripcion;
+    private double  distanciaDesdeUPB;   // km desde Food UPB → peso de la arista
     private boolean disponible;
 
     public Cuadrante(String nombre, String descripcion) {
         if (nombre == null || nombre.isBlank())
-            throw new IllegalArgumentException("El nombre del cuadrante no puede ser nulo ni vacío.");
-        this.nombre      = nombre.trim();
+            throw new IllegalArgumentException("El nombre no puede ser nulo ni vacío.");
+        this.nombre    = nombre.trim();
         this.descripcion = descripcion;
         this.disponible  = true;
     }
 
-    public Cuadrante(String nombre, String descripcion, double latitud, double longitud) {
+    public Cuadrante(String nombre, String descripcion, double distanciaDesdeUPB) {
         this(nombre, descripcion);
-        this.latitud  = latitud;
-        this.longitud = longitud;
+        this.distanciaDesdeUPB = distanciaDesdeUPB;
     }
 
     // ── Getters ───────────────────────────────────────────────────────────────
 
-    public String  getNombre()      { return nombre; }
-    public String  getDescripcion() { return descripcion; }
-    public double  getLatitud()     { return latitud; }
-    public double  getLongitud()    { return longitud; }
-    public boolean isDisponible()   { return disponible; }
+    public String  getNombre()             { return nombre; }
+    public String  getDescripcion()        { return descripcion; }
+    public double  getDistanciaDesdeUPB()  { return distanciaDesdeUPB; }
+    public boolean isDisponible()          { return disponible; }
 
     // ── Setters ───────────────────────────────────────────────────────────────
 
-    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
-    public void setLatitud(double latitud)         { this.latitud     = latitud; }
-    public void setLongitud(double longitud)       { this.longitud    = longitud; }
-    public void setDisponible(boolean disponible)  { this.disponible  = disponible; }
+    public void setDescripcion(String descripcion)           { this.descripcion       = descripcion; }
+    public void setDistanciaDesdeUPB(double distancia)       { this.distanciaDesdeUPB = distancia; }
+    public void setDisponible(boolean disponible)            { this.disponible         = disponible; }
 
     @Override
     public String toString() {
         return "[" + nombre + "] " + descripcion
-                + (disponible ? "" : " (no disponible)");
+                + " (" + distanciaDesdeUPB + " km desde UPB)"
+                + (disponible ? "" : " — no disponible");
     }
 }

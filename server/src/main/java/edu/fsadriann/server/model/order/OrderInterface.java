@@ -23,5 +23,6 @@ public interface OrderInterface extends Remote {
     boolean marcarListo(String orderId) throws RemoteException;
     LinkedList<Order> getPedidosEnPreparacion() throws RemoteException;
     LinkedList<Order> listarTodosPedidos() throws RemoteException;
+    boolean cambiarCantidadProducto(String pedidoId, String productoId, int nuevaCantidad) throws RemoteException;
 }
 

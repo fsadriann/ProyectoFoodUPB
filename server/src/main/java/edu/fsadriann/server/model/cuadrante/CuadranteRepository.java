@@ -12,8 +12,8 @@ import java.util.List;
 
 public class CuadranteRepository {
 
-    private static final String CUADS_FILE  = "data/cuadrantes.json";
-    private static final String CONNS_FILE  = "data/conexiones.json";
+    private static final String CUADS_FILE = "data/cuadrantes.json";
+    private static final String CONNS_FILE = "data/conexiones.json";
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
     // ── Cuadrantes ────────────────────────────────────────────────────────────
@@ -41,15 +41,17 @@ public class CuadranteRepository {
 
     public void saveConexion(String origen, String destino, double distancia) {
         List<ConexionEntry> lista = findAllConexiones();
-        // evitar duplicados
         lista.removeIf(c -> c.origen.equals(origen) && c.destino.equals(destino));
         lista.add(new ConexionEntry(origen, destino, distancia));
         writeList(CONNS_FILE, lista);
     }
 
-    // ── ConexionEntry ─────────────────────────────────────────────────────────
+    // ── ConexionEntry — Serializable para transmisión por RMI ─────────────────
 
-    public static class ConexionEntry {
+    public static class ConexionEntry implements java.io.Serializable {
+
+        private static final long serialVersionUID = 1L;
+
         public String origen;
         public String destino;
         public double distancia;
@@ -90,5 +92,17 @@ public class CuadranteRepository {
         File file = new File("server/src/main/resources/" + fileName);
         file.getParentFile().mkdirs();
         return file;
+    }
+
+    public void deleteCuadrante(String nombre) {
+        List<Cuadrante> lista = findAllCuadrantes();
+        lista.removeIf(c -> c.getNombre().equals(nombre));
+        saveAllCuadrantes(lista);
+    }
+
+    public void deleteConexionesDe(String nombre) {
+        List<ConexionEntry> lista = findAllConexiones();
+        lista.removeIf(c -> c.origen.equals(nombre) || c.destino.equals(nombre));
+        writeList(CONNS_FILE, lista);
     }
 }
