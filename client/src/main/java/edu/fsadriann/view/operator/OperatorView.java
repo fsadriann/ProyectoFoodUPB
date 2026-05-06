@@ -98,11 +98,10 @@ public class OperatorView extends JFrame {
         root.add(buildStatusBar(),       BorderLayout.SOUTH);
 
         setContentPane(root);
-
-        // Abrir maximizado (pantalla completa en modo ventana)
-        setExtendedState(JFrame.MAXIMIZED_BOTH);
         pack();
         setLocationRelativeTo(null);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);  // ← siempre al final
+        setVisible(true);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -236,7 +235,6 @@ public class OperatorView extends JFrame {
     // ─────────────────────────────────────────────────────────────────────────
     // LEFT PANEL
     // BorderLayout: identificacion arriba (NORTH), botones de accion abajo (SOUTH)
-    // Sin scroll — todo siempre visible.
     // ─────────────────────────────────────────────────────────────────────────
 
     private JPanel buildLeftPanel() {
@@ -574,7 +572,7 @@ public class OperatorView extends JFrame {
         JPanel dataCol = new JPanel();
         dataCol.setLayout(new BoxLayout(dataCol, BoxLayout.Y_AXIS));
         dataCol.setOpaque(false);
-        dataCol.setPreferredSize(new Dimension(220, 0));
+        dataCol.setPreferredSize(new Dimension(220, 260));
 
         dataCol.add(secLabel("Factura"));
         dataCol.add(Box.createVerticalStrut(10));
@@ -611,7 +609,7 @@ public class OperatorView extends JFrame {
         JScrollPane invScroll = new JScrollPane(invoiceOrderTable);
         invScroll.setBorder(new MatteBorder(1, 0, 0, 0, BORDER_C));
         invScroll.getViewport().setBackground(BG);
-        invScroll.setPreferredSize(new Dimension(0, 160));
+        invScroll.setPreferredSize(new Dimension(0, 130));
 
         card.add(dataCol,   BorderLayout.WEST);
         card.add(invScroll, BorderLayout.CENTER);
@@ -815,6 +813,7 @@ public class OperatorView extends JFrame {
     public DefaultTableModel getInvoiceOrderModel()                  { return invoiceOrderModel; }
     public void              addClearInvoiceOrderListener(Runnable r){ clearInvoiceOrderBtn.addActionListener(e -> r.run()); }
     public void              addSendToKitchenListener(Runnable r)    { sendToKitchenBtn.addActionListener(e -> r.run()); }
+    public void              addCuadranteSelectorListener(Runnable r){ cuadranteSelector.addActionListener(e -> r.run()); }
 
     // Navigation / shared
     public void addLogoutListener(Runnable r) { logoutBtn.addActionListener(e -> r.run()); }

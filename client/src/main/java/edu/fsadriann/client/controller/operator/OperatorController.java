@@ -53,6 +53,9 @@ public class OperatorController {
 			view.addSendToKitchenListener(() -> orderController.sendToKitchen());
 			view.addLogoutListener(this::handleLogout);
 
+			// Al cambiar cuadrante manualmente, refrescar total estimado
+			view.addCuadranteSelectorListener(() -> orderController.refreshOrderTotal());
+
 			view.getProductsTable().addMouseListener(new MouseAdapter() {
 				@Override
 				public void mouseClicked(MouseEvent e) {

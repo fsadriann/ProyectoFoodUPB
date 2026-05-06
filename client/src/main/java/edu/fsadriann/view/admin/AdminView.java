@@ -80,6 +80,7 @@ public class AdminView extends JFrame {
 
         root.add(main, BorderLayout.CENTER);
         setContentPane(root);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
         pack();
     }
 
@@ -749,106 +750,226 @@ public class AdminView extends JFrame {
 
     // ── Diálogos — Usuarios ───────────────────────────────────────────────────
 
-    public void showUserForm(Consumer<AdminUserFormData> onSave) {
-        showUserFormInternal("Nuevo usuario", null, onSave);
+    public void showUserForm(String[] cuadrantesDisponibles, Consumer<AdminUserFormData> onSave) {
+        showUserFormInternal("Nuevo usuario", null, cuadrantesDisponibles, onSave);
     }
 
     public void showEditUserForm(String nombre, String apellido, String telefono,
                                  String correo, String rol, String direccion,
+                                 String[] cuadrantesDisponibles,
                                  Consumer<AdminUserFormData> onSave) {
         showUserFormInternal("Editar usuario",
-                new String[]{nombre, apellido, telefono, correo, rol, direccion}, onSave);
+                new String[]{nombre, apellido, telefono, correo, rol, direccion},
+                cuadrantesDisponibles, onSave);
     }
 
     private void showUserFormInternal(String title, String[] prefill,
+                                      String[] cuadrantesDisponibles,
                                       Consumer<AdminUserFormData> onSave) {
         JDialog dialog = new JDialog(frame, title, true);
-        dialog.setSize(760, 540);
+        dialog.setSize(420, 480);
         dialog.setLocationRelativeTo(frame);
+        dialog.setResizable(false);
 
+        // ── Root ──────────────────────────────────────────────────────────────
         JPanel root = new JPanel(new BorderLayout());
-        root.setBackground(BG2);
-        root.setBorder(new EmptyBorder(16, 16, 16, 16));
+        root.setBackground(BG);
+        root.setBorder(new EmptyBorder(20, 24, 16, 24));
 
-        JPanel form = new JPanel(new GridLayout(0, 2, 12, 10));
-        form.setOpaque(false);
+        JLabel titleLbl = new JLabel(title);
+        titleLbl.setFont(new Font("SansSerif", Font.BOLD, 15));
+        titleLbl.setForeground(BLUE);
+        titleLbl.setBorder(new EmptyBorder(0, 0, 16, 0));
+        root.add(titleLbl, BorderLayout.NORTH);
 
-        JTextField nombre    = field(prefill != null ? prefill[0] : "Nombre");
-        JTextField apellido  = field(prefill != null ? prefill[1] : "Apellido");
-        JTextField telefono  = field(prefill != null ? prefill[2] : "Teléfono");
-        JTextField correo    = field(prefill != null ? prefill[3] : "Correo");
-        JPasswordField clave = new JPasswordField();
-        clave.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        clave.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(BORDER_C), new EmptyBorder(6, 10, 6, 10)));
+        // ── Formulario con BoxLayout ──────────────────────────────────────────
+        JPanel form = new JPanel();
+        form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
+        form.setBackground(BG);
+
+        // Campos comunes
+        JTextField nombre   = styledFormField(prefill != null ? prefill[0] : "");
+        JTextField apellido = styledFormField(prefill != null ? prefill[1] : "");
+        JTextField telefono = styledFormField(prefill != null ? prefill[2] : "");
+        JTextField direccion = styledFormField(prefill != null && prefill.length > 5 ? prefill[5] : "");
+
+        // Selector de rol
         JComboBox<String> rol = new JComboBox<>(
-                new String[]{"CLIENTE", "OPERADOR", "ADMIN", "COCINA", "ENTREGA", "SERVER"});
+                new String[]{"CLIENTE", "OPERADOR", "ADMIN", "COCINA", "ENTREGA"});
+        rol.setFont(new Font("SansSerif", Font.PLAIN, 12));
         if (prefill != null && prefill[4] != null) rol.setSelectedItem(prefill[4]);
 
-        JTextField calle     = field("Calle");
-        JTextField carrera   = field("Carrera/Avenida");
-        JTextField numero    = field("Número");
-        JTextField casa      = field("Casa/Apto");
-        JTextField barrio    = field("Barrio");
-        JTextField municipio = field("Municipio");
+        form.add(formRow("Nombre *",    nombre));
+        form.add(Box.createVerticalStrut(8));
+        form.add(formRow("Apellido *",  apellido));
+        form.add(Box.createVerticalStrut(8));
+        form.add(formRow("Teléfono *",  telefono));
+        form.add(Box.createVerticalStrut(8));
+        form.add(formRow("Dirección",   direccion));
+        form.add(Box.createVerticalStrut(8));
+        form.add(formRow("Rol",         rol));
+        form.add(Box.createVerticalStrut(12));
 
-        JPanel addrPanel = new JPanel(new GridLayout(0, 2, 10, 8));
-        addrPanel.setOpaque(false);
-        addrPanel.setBorder(BorderFactory.createTitledBorder("Dirección (solo CLIENTE)"));
-        addrPanel.add(calle);  addrPanel.add(carrera);
-        addrPanel.add(numero); addrPanel.add(casa);
-        addrPanel.add(barrio); addrPanel.add(municipio);
+        // ── Sección CLIENTE ───────────────────────────────────────────────────
+        JPanel clienteSection = new JPanel();
+        clienteSection.setLayout(new BoxLayout(clienteSection, BoxLayout.Y_AXIS));
+        clienteSection.setBackground(BG);
 
-        rol.addActionListener(e -> {
-            addrPanel.setVisible("CLIENTE".equals(String.valueOf(rol.getSelectedItem())));
-            dialog.revalidate(); dialog.repaint();
-        });
+        // Tipo: Estándar / Premium
+        JRadioButton estandarRadio = new JRadioButton("Estándar");
+        estandarRadio.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        estandarRadio.setBackground(BG);
+        estandarRadio.setSelected(true);
 
-        form.add(labeled("Nombre",     nombre));
-        form.add(labeled("Apellido",   apellido));
-        form.add(labeled("Teléfono",   telefono));
-        form.add(labeled("Correo",     correo));
-        form.add(labeled("Contraseña", clave));
-        form.add(labeled("Rol",        rol));
+        JRadioButton premiumRadio = new JRadioButton("Premium  (domicilio gratis)");
+        premiumRadio.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        premiumRadio.setBackground(BG);
+        premiumRadio.setForeground(new Color(21, 87, 36));
 
-        JPanel bottom = new JPanel(new BorderLayout());
-        bottom.setOpaque(false);
-        bottom.setBorder(new EmptyBorder(10, 0, 0, 0));
+        ButtonGroup tipoGroup = new ButtonGroup();
+        tipoGroup.add(estandarRadio);
+        tipoGroup.add(premiumRadio);
+
+        JPanel tipoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        tipoPanel.setBackground(BG);
+        tipoPanel.add(estandarRadio);
+        tipoPanel.add(Box.createHorizontalStrut(10));
+        tipoPanel.add(premiumRadio);
+        clienteSection.add(formRow("Tipo *", tipoPanel));
+        clienteSection.add(Box.createVerticalStrut(8));
+
+        // Cuadrante
+        JComboBox<String> cuadranteCombo = new JComboBox<>(new String[]{"-- Sin asignar --"});
+        cuadranteCombo.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        if (cuadrantesDisponibles != null)
+            for (String c : cuadrantesDisponibles) cuadranteCombo.addItem(c);
+        clienteSection.add(formRow("Cuadrante", cuadranteCombo));
+        clienteSection.add(Box.createVerticalStrut(12));
+
+        // ── Sección operativo (correo + contraseña) ───────────────────────────
+        JPanel opSection = new JPanel();
+        opSection.setLayout(new BoxLayout(opSection, BoxLayout.Y_AXIS));
+        opSection.setBackground(BG);
+
+        JTextField correo = styledFormField(prefill != null ? prefill[3] : "");
+        JPasswordField clave = new JPasswordField();
+        clave.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        clave.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(BORDER_C), new EmptyBorder(4, 8, 4, 8)));
+        clave.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        clave.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        opSection.add(formRow("Correo *",      correo));
+        opSection.add(Box.createVerticalStrut(8));
+        opSection.add(formRow("Contraseña *",  clave));
+        opSection.add(Box.createVerticalStrut(12));
+
+        form.add(clienteSection);
+        form.add(opSection);
+
+        // Mostrar/ocultar secciones según rol
+        Runnable updateSections = () -> {
+            boolean esCliente = "CLIENTE".equals(String.valueOf(rol.getSelectedItem()));
+            clienteSection.setVisible(esCliente);
+            opSection.setVisible(!esCliente);
+            dialog.pack();
+            dialog.setLocationRelativeTo(frame);
+        };
+        rol.addActionListener(e -> updateSections.run());
+
+        // ── Error + botones ───────────────────────────────────────────────────
         JLabel error = new JLabel(" ");
         error.setForeground(DANGER);
-        error.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        error.setFont(new Font("SansSerif", Font.PLAIN, 11));
 
-        JButton save = new JButton("Guardar");
-        styleBtn(save, BLUE, Color.WHITE);
-        save.addActionListener(e -> {
+        JButton cancelBtn = new JButton("Cancelar");
+        cancelBtn.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        cancelBtn.setFocusPainted(false);
+        cancelBtn.addActionListener(e -> dialog.dispose());
+
+        JButton saveBtn = new JButton("Registrar");
+        styleBtn(saveBtn, BLUE, Color.WHITE);
+
+        saveBtn.addActionListener(e -> {
             String n  = nombre.getText().trim();
-            String a  = apellido.getText().trim();
+            String ap = apellido.getText().trim();
             String te = telefono.getText().trim();
-            String c  = correo.getText().trim();
-            String p  = new String(clave.getPassword()).trim();
             String r  = String.valueOf(rol.getSelectedItem());
-            if (n.isBlank() || a.isBlank() || te.isBlank() || c.isBlank()) {
-                error.setText("Nombre, apellido, teléfono y correo son obligatorios."); return;
+
+            if (n.isBlank() || ap.isBlank() || te.isBlank()) {
+                error.setText("Nombre, apellido y teléfono son obligatorios."); return;
             }
-            String direccion = "";
+            if (!te.matches("\\d{10}")) {
+                error.setText("El teléfono debe tener 10 dígitos."); return;
+            }
+
+            String  dir       = direccion.getText().trim();
+            boolean premium   = false;
+            String  cuadrante = null;
+            String  co        = "";
+            String  pw        = "";
+
             if ("CLIENTE".equals(r)) {
-                direccion = String.format("%s %s %s %s, %s, %s",
-                        calle.getText().trim(), carrera.getText().trim(),
-                        numero.getText().trim(), casa.getText().trim(),
-                        barrio.getText().trim(), municipio.getText().trim()).trim();
+                premium = premiumRadio.isSelected();
+                Object sel = cuadranteCombo.getSelectedItem();
+                if (sel != null && !sel.toString().startsWith("--")) cuadrante = sel.toString();
+                co = "tel_" + te + "@foodupb.local";
+            } else {
+                co = correo.getText().trim();
+                pw = new String(clave.getPassword()).trim();
+                if (co.isBlank()) { error.setText("El correo es obligatorio."); return; }
+                if (pw.isBlank()) { error.setText("La contraseña es obligatoria."); return; }
             }
-            onSave.accept(new AdminUserFormData(n, a, te, c, p, r, direccion));
+
+            onSave.accept(new AdminUserFormData(n, ap, te, co, pw, r, dir, premium, cuadrante));
             dialog.dispose();
         });
 
-        bottom.add(error, BorderLayout.CENTER);
-        bottom.add(save,  BorderLayout.EAST);
-        root.add(form,      BorderLayout.NORTH);
-        root.add(addrPanel, BorderLayout.CENTER);
-        root.add(bottom,    BorderLayout.SOUTH);
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        btnRow.setBackground(BG);
+        btnRow.setBorder(new EmptyBorder(4, 0, 0, 0));
+        btnRow.add(cancelBtn);
+        btnRow.add(saveBtn);
+
+        JPanel south = new JPanel(new BorderLayout());
+        south.setBackground(BG);
+        south.add(error,  BorderLayout.WEST);
+        south.add(btnRow, BorderLayout.EAST);
+
+        root.add(form,  BorderLayout.CENTER);
+        root.add(south, BorderLayout.SOUTH);
+
         dialog.setContentPane(root);
-        addrPanel.setVisible("CLIENTE".equals(String.valueOf(rol.getSelectedItem())));
+        updateSections.run();
         dialog.setVisible(true);
+    }
+
+    /** Campo de formulario estilizado igual que RegisterClientDialog */
+    private JTextField styledFormField(String value) {
+        JTextField f = new JTextField(value, 20);
+        f.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        f.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(BORDER_C), new EmptyBorder(4, 8, 4, 8)));
+        f.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        f.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return f;
+    }
+
+    /** Fila etiqueta + componente para el formulario */
+    private JPanel formRow(String labelText, JComponent component) {
+        JPanel row = new JPanel();
+        row.setLayout(new BoxLayout(row, BoxLayout.Y_AXIS));
+        row.setBackground(BG);
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel lbl = new JLabel(labelText);
+        lbl.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        lbl.setForeground(TEXT2);
+        lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        component.setAlignmentX(Component.LEFT_ALIGNMENT);
+        row.add(lbl);
+        row.add(Box.createVerticalStrut(4));
+        row.add(component);
+        return row;
     }
 
     // ── Setters de datos ──────────────────────────────────────────────────────
@@ -1028,8 +1149,13 @@ public class AdminView extends JFrame {
         }
     }
 
-    public void showView() { setVisible(true); toFront(); }
-    public void hideView() { setVisible(false); }
+    public void showView() {
+        pack();
+        setLocationRelativeTo(null);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+        setVisible(true);
+        toFront();
+    }
     public JFrame getFrame() { return frame; }
 
     // ── WrapLayout (no usado, mantenido por compatibilidad) ───────────────────

@@ -58,6 +58,7 @@ public class DeliveryView extends JFrame {
         root.add(buildContent(), BorderLayout.CENTER);
         root.add(buildStatus(),  BorderLayout.SOUTH);
         setContentPane(root);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
         pack();
     }
 
@@ -506,7 +507,13 @@ public class DeliveryView extends JFrame {
     public void addCalcRouteListener(Runnable r) { calcRouteBtn.addActionListener(e -> r.run()); }
     public void addRefreshListener(Runnable r)   { refreshBtn.addActionListener(e -> r.run()); }
     public void setMessage(String msg)           { SwingUtilities.invokeLater(() -> statusLabel.setText(msg)); }
-    public void showView()   { setVisible(true); toFront(); }
+    public void showView() {
+        pack();
+        setLocationRelativeTo(null);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+        setVisible(true);
+        toFront();
+    }
     public void hideView()   { setVisible(false); }
     public JFrame getFrame() { return frame; }
 

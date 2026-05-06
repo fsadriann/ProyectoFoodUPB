@@ -42,16 +42,16 @@ public class ClientFactory {
         KitchenView  kitchenView  = new KitchenView(userLabel);
         DeliveryView deliveryView = new DeliveryView(userLabel);
 
+        ViewRouter router = new ViewRouter(loginView, operatorView, adminView, kitchenView, deliveryView);
+
         // ── Controladores ─────────────────────────────────────────────────────
         ProductController  productController  = new ProductController(model, operatorView);
         OrderController    orderController    = new OrderController(model, operatorView);
         OperatorController operatorController = new OperatorController(model, operatorView, productController, orderController);
         AdminController    adminController    = new AdminController(model, adminView);
         KitchenController  kitchenController  = new KitchenController(model, kitchenView);
-        DeliveryController deliveryController = new DeliveryController(model, deliveryView);
+        DeliveryController deliveryController = new DeliveryController(model, deliveryView, router);
 
-        // ── Router ────────────────────────────────────────────────────────────
-        ViewRouter router = new ViewRouter(loginView, operatorView, adminView, kitchenView, deliveryView);
 
         // ── Listeners de logout (los que no están en sus propios controladores)
         adminView.addLogoutListener(() -> {

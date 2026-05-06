@@ -34,7 +34,7 @@ public class AdminController {
             view.addDeleteCuadListener(this::handleDeleteCuadrante);
 
             // Usuarios
-            view.addOpenUserFormListener(() -> view.showUserForm(this::handleCreateUser));
+            view.addOpenUserFormListener(() -> view.showUserForm(getCuadrantesNombres(), this::handleCreateUser));
             view.addEditUserListener(this::handleEditUser);
             view.addDeleteUserListener(this::handleDeleteUser);
 
@@ -271,20 +271,32 @@ public class AdminController {
         Rol rol = parseRol(data.getRol());
         if (rol == null) { view.setMessage("Rol inválido."); return; }
 
+        String cedula = rol == Rol.CLIENTE
+                ? "CLI-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase()
+                : data.getTelefono();
+
+        String contrasena = data.getContrasena();
+        if (contrasena == null || contrasena.isBlank()) {
+            contrasena = data.getTelefono();
+        }
+
         User user = new User(
                 data.getCorreo(), data.getNombre(), data.getApellido(), rol,
-                data.getTelefono(), rol == Rol.CLIENTE,
+                cedula, data.isPremium(),
                 data.getTelefono(), data.getDireccionCompleta(), null
         );
 
-        boolean created = model.registrarUsuario(user, data.getContrasena());
+        if (data.getCuadrante() != null && !data.getCuadrante().isBlank())
+            user.setCuadrante(data.getCuadrante());
+
+        boolean created = model.registrarUsuario(user, contrasena);
+        System.out.println("[DEBUG] registrarUsuario -> " + created + " | pass: '" + contrasena + "'"); // ← aquí
         if (!created) { view.setMessage("No se pudo registrar el usuario."); return; }
 
         refreshUsers();
         view.setTotalUsers(model.getTotalUsuarios());
         view.setMessage("Usuario registrado correctamente.");
     }
-
     private void handleEditUser() {
         String telefono = view.getSelectedUserTelefono();
         if (telefono == null) return;
@@ -304,15 +316,18 @@ public class AdminController {
                 userToEdit.getTelefono(), userToEdit.getId(),
                 userToEdit.getRol() != null ? userToEdit.getRol().name() : "CLIENTE",
                 userToEdit.getDireccion() != null ? userToEdit.getDireccion() : "",
+                getCuadrantesNombres(),
                 data -> {
                     Rol rol = parseRol(data.getRol());
                     if (rol == null) { view.setMessage("Rol inválido."); return; }
 
                     User updated = new User(
                             data.getCorreo(), data.getNombre(), data.getApellido(), rol,
-                            userToEdit.getCedula(), rol == Rol.CLIENTE,
+                            userToEdit.getCedula(), data.isPremium(),
                             data.getTelefono(), data.getDireccionCompleta(), null
                     );
+                    if (data.getCuadrante() != null && !data.getCuadrante().isBlank())
+                        updated.setCuadrante(data.getCuadrante());
 
                     boolean ok = model.actualizarCliente(updated);
                     if (!ok) { view.setMessage("No se pudo actualizar el usuario."); return; }
@@ -359,6 +374,17 @@ public class AdminController {
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private String[] getCuadrantesNombres() {
+        LinkedList<Cuadrante> cuads = model.listarCuadrantes();
+        java.util.List<String> nombres = new java.util.ArrayList<>();
+        edu.fsadriann.model.iterator.Iterator<Cuadrante> it = cuads.iterator();
+        while (it.hasNext()) {
+            Cuadrante c = it.next();
+            if (c != null && !"UPB".equals(c.getNombre())) nombres.add(c.getNombre());
+        }
+        return nombres.toArray(new String[0]);
+    }
 
     private Rol parseRol(String rol) {
         if (rol == null) return null;

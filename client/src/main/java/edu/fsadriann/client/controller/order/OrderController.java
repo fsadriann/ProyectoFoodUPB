@@ -231,7 +231,8 @@ public class OrderController {
 			subtotal += (double) p.getPrecio() * p.getCantidad();
 		}
 		double iva   = subtotal * IVA;
-		double domi  = order.isPremium() ? 0.0 : COSTO_DOMI_STD;
+		// Usar el domicilio real calculado por el servidor (Dijkstra desde UPB)
+		double domi  = order.isPremium() ? 0.0 : Math.max(0, serverTotal - subtotal - iva);
 		double total = serverTotal > 0 ? serverTotal : (subtotal + iva + domi);
 
 		User client = model.getCurrentClient();
@@ -331,16 +332,27 @@ public class OrderController {
 
 	// ── Helpers privados ──────────────────────────────────────────────────────
 
-	// FIX 2: recalcula y muestra el total del pedido en tiempo real
-	private void refreshOrderTotal() {
+	// Accesible desde OperatorController para refrescar cuando cambia el cuadrante
+    public void refreshOrderTotal() {
 		double subtotal = 0.0;
 		for (Product p : currentOrderProducts) {
 			subtotal += (double) p.getPrecio() * p.getCantidad();
 		}
 		Order order = model.getCurrentOrder();
 		boolean isPremium = order != null && order.isPremium();
-		double iva   = subtotal * IVA;
-		double domi  = isPremium ? 0.0 : COSTO_DOMI_STD;
+		double iva = subtotal * IVA;
+
+		double domi = COSTO_DOMI_STD;
+		if (isPremium) {
+			domi = 0.0;
+		} else {
+			String cuadrante = view.getSelectedCuadrante();
+			if (cuadrante != null && !cuadrante.isBlank()) {
+				double distKm = model.calcularDistanciaCuadrantes("UPB", cuadrante);
+				if (distKm > 0) domi = 2_000.0 + (distKm * 800.0);
+			}
+		}
+
 		double total = subtotal + iva + domi;
 		view.setOrderTotal("$" + COP.format(Math.round(total)));
 	}
