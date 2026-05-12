@@ -4,7 +4,7 @@ Sistema desarrollado para la gestión integral de pedidos de comida a domicilio 
 
 ## **Descripción General**
 
-FoodUPB automatiza los procesos de gestión de pedidos que de otra forma se realizarían de forma manual. El sistema cubre desde el registro del cliente y la creación del pedido, pasando por la preparación en cocina, hasta la asignación del repartidor y la entrega final, con soporte para múltiples roles de usuario y comunicación en red mediante Java RMI.
+FoodUPB sistematiza los procesos de gestión de pedidos que de otra forma se realizarían de forma manual. El sistema cubre desde el registro del cliente y la creación del pedido, pasando por la preparación en cocina, hasta la asignación del repartidor y la entrega final, con soporte para múltiples roles de usuario y comunicación en red mediante Java RMI.
 
 ## **Problemática**
 
