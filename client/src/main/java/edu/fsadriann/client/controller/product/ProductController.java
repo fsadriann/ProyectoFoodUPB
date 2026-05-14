@@ -1,6 +1,6 @@
 package edu.fsadriann.client.controller.product;
 
-import edu.fsadriann.client.model.ClientModel;
+import edu.fsadriann.client.model.operator.OperatorModel;
 import edu.fsadriann.model.iterator.Iterator;
 import edu.fsadriann.server.model.product.Product;
 import edu.fsadriann.app.linkedlist.singly.singly.LinkedList;
@@ -12,14 +12,14 @@ import java.util.List;
 
 public class ProductController {
 
-	private final ClientModel  model;
+	private final OperatorModel  model;
 	private final OperatorView view;
 
 	// Cache local de los productos mostrados en productsTable.
 	// El índice coincide con la fila del DefaultTableModel.
 	private final List<Product> displayedProducts = new ArrayList<>();
 
-	public ProductController(ClientModel model, OperatorView view) {
+	public ProductController(OperatorModel model, OperatorView view) {
 		this.model = model;
 		this.view  = view;
 	}

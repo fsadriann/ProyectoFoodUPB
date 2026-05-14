@@ -4,14 +4,22 @@ import edu.fsadriann.client.controller.admin.AdminController;
 import edu.fsadriann.client.controller.delivery.DeliveryController;
 import edu.fsadriann.client.controller.kitchen.KitchenController;
 import edu.fsadriann.client.controller.operator.OperatorController;
-import edu.fsadriann.client.model.ClientModel;
+import edu.fsadriann.client.model.auth.AuthModel;
+import edu.fsadriann.client.model.operator.OperatorModel;
+import edu.fsadriann.client.model.kitchen.KitchenModel;
+import edu.fsadriann.client.model.admin.AdminModel;
+import edu.fsadriann.client.model.delivery.DeliveryModel;
 import edu.fsadriann.client.router.ViewRouter;
 import edu.fsadriann.server.model.user.Rol;
 import edu.fsadriann.view.auth.LoginView;
 
 public class AuthClientController {
 
-    private final ClientModel        model;
+    private final AuthModel          authModel;
+    private final OperatorModel      operatorModel;
+    private final KitchenModel       kitchenModel;
+    private final AdminModel         adminModel;
+    private final DeliveryModel      deliveryModel;
     private final LoginView          loginView;
     private final OperatorController operatorController;
     private final AdminController    adminController;
@@ -19,22 +27,30 @@ public class AuthClientController {
     private final DeliveryController deliveryController;
     private final ViewRouter         viewRouter;
 
-    private boolean kitchenInitialized  = false;
+    private boolean kitchenInitialized = false;
 
-    public AuthClientController(ClientModel model,
+    public AuthClientController(AuthModel authModel,
+                                OperatorModel operatorModel,
+                                KitchenModel kitchenModel,
+                                AdminModel adminModel,
+                                DeliveryModel deliveryModel,
                                 LoginView loginView,
                                 OperatorController operatorController,
                                 AdminController adminController,
                                 KitchenController kitchenController,
                                 DeliveryController deliveryController,
                                 ViewRouter viewRouter) {
-        this.model               = model;
-        this.loginView           = loginView;
-        this.operatorController  = operatorController;
-        this.adminController     = adminController;
-        this.kitchenController   = kitchenController;
-        this.deliveryController  = deliveryController;
-        this.viewRouter          = viewRouter;
+        this.authModel          = authModel;
+        this.operatorModel      = operatorModel;
+        this.kitchenModel       = kitchenModel;
+        this.adminModel         = adminModel;
+        this.deliveryModel      = deliveryModel;
+        this.loginView          = loginView;
+        this.operatorController = operatorController;
+        this.adminController    = adminController;
+        this.kitchenController  = kitchenController;
+        this.deliveryController = deliveryController;
+        this.viewRouter         = viewRouter;
     }
 
     public void init() {
@@ -42,7 +58,9 @@ public class AuthClientController {
         operatorController.setLogoutAction(this::showLoginView);
         kitchenController.setLogoutAction(this::showLoginView);
 
-        boolean connected = model.connect();
+        boolean connected = authModel.connect();
+        if (connected) injectServices();
+
         loginView.setLoginEnabled(true);
         loginView.setMessage(connected
                 ? "Conexion establecida. Ingresa tus credenciales."
@@ -51,12 +69,16 @@ public class AuthClientController {
     }
 
     private void handleLogin() {
-        if (!model.isConnected() && !model.connect()) {
-            loginView.showError("No fue posible conectar con el servidor.");
-            return;
+        if (!authModel.isConnected()) {
+            boolean reconnected = authModel.connect();
+            if (!reconnected) {
+                loginView.showError("No fue posible conectar con el servidor.");
+                return;
+            }
+            injectServices();
         }
 
-        Rol role = model.login(loginView.getUserText(), loginView.getPasswordText());
+        Rol role = authModel.login(loginView.getUserText(), loginView.getPasswordText());
         if (role == null) {
             loginView.showError("Credenciales invalidas.");
             return;
@@ -65,12 +87,8 @@ public class AuthClientController {
         loginView.setMessage("Acceso concedido.");
         loginView.setVisible(false);
 
-        if (role == Rol.OPERADOR) {
-            operatorController.init();
-        }
-        if (role == Rol.ADMIN) {
-            adminController.init();
-        }
+        if (role == Rol.OPERADOR) operatorController.init();
+        if (role == Rol.ADMIN)    adminController.init();
         if (role == Rol.COCINA) {
             if (!kitchenInitialized) {
                 kitchenController.init();
@@ -79,18 +97,42 @@ public class AuthClientController {
                 kitchenController.show();
             }
         }
-        if (role == Rol.ENTREGA) {
-            deliveryController.init();
-        }
+        if (role == Rol.ENTREGA) deliveryController.init();
 
         viewRouter.show(role);
     }
 
     private void showLoginView() {
-        model.logout();
+        authModel.logout();
+        operatorModel.logout();
         kitchenInitialized = false;
         viewRouter.showLogin();
         loginView.setVisible(true);
         loginView.setMessage("Sesion cerrada.");
+    }
+
+    private void injectServices() {
+        operatorModel.injectServices(
+                authModel.getUserService(),
+                authModel.getProductService(),
+                authModel.getOrderService(),
+                authModel.getCuadranteService());
+
+        kitchenModel.injectServices(
+                authModel.getKitchenService(),
+                authModel.getOrderService());
+
+        adminModel.injectServices(
+                authModel.getUserService(),
+                authModel.getProductService(),
+                authModel.getOrderService(),
+                authModel.getAdminService(),
+                authModel.getCuadranteService());
+
+        deliveryModel.injectServices(
+                authModel.getOrderService(),
+                authModel.getDeliveryService(),
+                authModel.getCuadranteService(),
+                authModel.getAdminService());
     }
 }

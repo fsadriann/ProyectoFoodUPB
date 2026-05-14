@@ -1,7 +1,7 @@
 package edu.fsadriann.client.controller.delivery;
 
 import edu.fsadriann.app.linkedlist.singly.singly.LinkedList;
-import edu.fsadriann.client.model.ClientModel;
+import edu.fsadriann.client.model.delivery.DeliveryModel;
 import edu.fsadriann.server.model.cuadrante.Cuadrante;
 import edu.fsadriann.server.model.cuadrante.CuadranteRepository;
 import edu.fsadriann.server.model.delivery.Delivery;
@@ -20,15 +20,15 @@ public class DeliveryController {
     private static final String ORIGEN     = "UPB";
     private static final int    REFRESH_MS = 8_000;
 
-    private final ClientModel  model;
+    private final DeliveryModel  model;
     private final DeliveryView view;
     private boolean initialized;
-    private boolean cuadrantesLoaded = false; // ← evita reconstruir grafo en cada refresh
-    private boolean rutaCalculada    = false; // ← controla si hay ruta antes de iniciar entrega
+    private boolean cuadrantesLoaded = false;
+    private boolean rutaCalculada    = false;
     private Timer   refreshTimer;
     private final edu.fsadriann.client.router.ViewRouter router;
 
-    public DeliveryController(ClientModel model, DeliveryView view, edu.fsadriann.client.router.ViewRouter router) {
+    public DeliveryController(DeliveryModel model, DeliveryView view, edu.fsadriann.client.router.ViewRouter router) {
         this.model = model;
         this.view  = view;
         this.router = router;

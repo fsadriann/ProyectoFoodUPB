@@ -2,7 +2,7 @@ package edu.fsadriann.client.controller.operator;
 
 import edu.fsadriann.client.controller.order.OrderController;
 import edu.fsadriann.client.controller.product.ProductController;
-import edu.fsadriann.client.model.ClientModel;
+import edu.fsadriann.client.model.operator.OperatorModel;
 import edu.fsadriann.app.linkedlist.singly.singly.LinkedList;
 import edu.fsadriann.model.iterator.Iterator;
 import edu.fsadriann.server.model.order.Order;
@@ -17,18 +17,18 @@ import javax.swing.table.DefaultTableModel;
 
 public class OperatorController {
 
-	private final ClientModel      model;
+	private final OperatorModel    model;
 	private final OperatorView     view;
 	private final ProductController productController;
 	private final OrderController  orderController;
 	private Runnable logoutAction;
 	private boolean  initialized;
 
-	public OperatorController(ClientModel model, OperatorView view) {
+	public OperatorController(OperatorModel model, OperatorView view) {
 		this(model, view, new ProductController(model, view), new OrderController(model, view));
 	}
 
-	public OperatorController(ClientModel model, OperatorView view,
+	public OperatorController(OperatorModel model, OperatorView view,
 							  ProductController productController, OrderController orderController) {
 		this.model             = model;
 		this.view              = view;
@@ -87,7 +87,7 @@ public class OperatorController {
 		this.logoutAction = logoutAction;
 	}
 
-	public ClientModel getModel() { return model; }
+	public OperatorModel getModel() { return model; }
 	public OperatorView getView() { return view;  }
 
 	// ─────────────────────────────────────────────────────────────────────────

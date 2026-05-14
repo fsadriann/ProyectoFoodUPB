@@ -1,6 +1,6 @@
 package edu.fsadriann.client.controller.order;
 
-import edu.fsadriann.client.model.ClientModel;
+import edu.fsadriann.client.model.operator.OperatorModel;
 import edu.fsadriann.server.model.order.EstadoPedido;
 import edu.fsadriann.server.model.order.Order;
 import edu.fsadriann.server.model.product.Product;
@@ -19,12 +19,12 @@ public class OrderController {
 
 	private static final NumberFormat COP = NumberFormat.getNumberInstance(new Locale("es", "CO"));
 
-	private final ClientModel  model;
+	private final OperatorModel  model;
 	private final OperatorView view;
 
 	private java.util.List<Product> currentOrderProducts = new java.util.ArrayList<>();
 
-	public OrderController(ClientModel model, OperatorView view) {
+	public OrderController(OperatorModel model, OperatorView view) {
 		this.model = model;
 		this.view  = view;
 	}

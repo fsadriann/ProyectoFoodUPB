@@ -1,6 +1,6 @@
 package edu.fsadriann.client.controller.kitchen;
 
-import edu.fsadriann.client.model.ClientModel;
+import edu.fsadriann.client.model.kitchen.KitchenModel;
 import edu.fsadriann.model.iterator.Iterator;
 import edu.fsadriann.server.model.order.Order;
 import edu.fsadriann.server.model.product.Product;
@@ -37,7 +37,7 @@ public class KitchenController {
         public int hashCode() { return orderId.hashCode(); }
     }
 
-    private final ClientModel model;
+    private final KitchenModel model;
     private final KitchenView view;
 
     private final LinkedList<String>      enqueuedIds = new LinkedList<>();
@@ -51,7 +51,7 @@ public class KitchenController {
     private Timer    refreshTimer;
     private Runnable logoutAction;
 
-    public KitchenController(ClientModel model, KitchenView view) {
+    public KitchenController(KitchenModel model, KitchenView view) {
         this.model = model;
         this.view  = view;
     }

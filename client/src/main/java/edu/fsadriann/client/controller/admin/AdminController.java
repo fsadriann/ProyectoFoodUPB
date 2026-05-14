@@ -1,7 +1,7 @@
 package edu.fsadriann.client.controller.admin;
 
 import edu.fsadriann.app.linkedlist.singly.singly.LinkedList;
-import edu.fsadriann.client.model.ClientModel;
+import edu.fsadriann.client.model.admin.AdminModel;
 import edu.fsadriann.server.model.cuadrante.Cuadrante;
 import edu.fsadriann.server.model.order.Order;
 import edu.fsadriann.server.model.user.Rol;
@@ -14,11 +14,11 @@ public class AdminController {
 
     private static final double UMBRAL_VECINO_KM = 0.4;
 
-    private final ClientModel model;
+    private final AdminModel model;
     private final AdminView   view;
     private boolean initialized;
 
-    public AdminController(ClientModel model, AdminView view) {
+    public AdminController(AdminModel model, AdminView view) {
         this.model = model;
         this.view  = view;
     }
