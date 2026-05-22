@@ -15,6 +15,16 @@ class CuadranteServiceTest {
 
     @BeforeEach
     void setUp() {
+        CuadranteRepository repo = new CuadranteRepository();
+
+        LinkedList<Cuadrante> cuadrantes = repo.findAllCuadrantes();
+        cuadrantes.remove(c -> c.getNombre().startsWith("T-"));
+        repo.saveAllCuadrantes(cuadrantes);
+
+        LinkedList<CuadranteRepository.ConexionEntry> conexiones = repo.findAllConexiones();
+        conexiones.remove(c -> c.origen.startsWith("T-") || c.destino.startsWith("T-"));
+        repo.saveAllConexiones(conexiones);
+
         service = new CuadranteService();
     }
 

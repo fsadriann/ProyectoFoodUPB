@@ -77,7 +77,7 @@ El proyecto utiliza estructuras de datos propias (no las de Java) para las opera
 | `LinkedList<T>` | Almacenamiento de pedidos, usuarios, productos y cuadrantes en todos los servicios |
 | `Stack<T>` | Bitácora de acciones del servidor en `History` (orden LIFO, acción más reciente primero) |
 | `PriorityQueue<T>` | Cola de pedidos en cocina — los pedidos Premium tienen prioridad `0` (alta), los estándar prioridad `1` |
-| `matrixGraph<T>` | Mapa de cuadrantes en `CuadranteService` — soporta Dijkstra para calcular la ruta y distancia más corta |
+| `Graph<T>` | Mapa de cuadrantes en `CuadranteService` — soporta Dijkstra para calcular la ruta y distancia más corta |
 
 # **Diseño del Sistema**
 
@@ -96,29 +96,39 @@ El proyecto utiliza estructuras de datos propias (no las de Java) para las opera
 # **Cómo Inicializar el Programa**
 
 ### **1. Configurar el servidor**
-Edita el archivo `server/config.properties` con la IP y puerto deseados:
+Edita el archivo `server/src/main/resources/config.properties` con la IP y puerto deseados:
 ```properties
 SERVER_IP=localhost
 SERVER_PORT=1808
 SERVER_NAME=foodupb
 ```
 
-### **2. Iniciar el servidor**
-Desde la raíz del proyecto, en la terminal:
+### **2. Compilar el proyecto**
+Desde la raíz del proyecto:
 ```bash
-cd server
-mvn exec:java
+mvn install -DskipTests
 ```
 
-### **3. Iniciar el cliente**
-En otra terminal:
-```bash
-cd client
-mvn exec:java
+### **3. Iniciar el servidor**
+Para iniciar el programa, ejecuta la clase App del módulo `server`:
+```
+server/src/main/java/edu/fsadriann/App.java
+```
+
+### **4. Iniciar el cliente**
+En otra configuración de ejecución ejecuta la clase App del módulo `client`:
+```
+client/src/main/java/edu/fsadriann/App.java
 ```
 
 ### **Credenciales de prueba**
-Usa las credenciales registradas en `server/src/main/resources/data/users.json` y `credentials.json`.
+
+| Rol | Correo / Usuario | Contraseña |
+|---|---|---|
+| `ADMIN` | admin@test.com | 1234 |
+| `OPERADOR` | operator@test.com | 1234 |
+| `COCINA` | cocina@test.com | 1234 |
+| `ENTREGA` | entrega@test.com | 1234 |
 
 # **Integrantes del Equipo de Desarrollo**
 - Adrián Felipe Forero Suárez ([fsadriann](https://github.com/fsadriann))

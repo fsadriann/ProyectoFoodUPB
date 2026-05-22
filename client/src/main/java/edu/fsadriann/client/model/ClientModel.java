@@ -376,13 +376,13 @@ public class ClientModel extends Subject {
         }
     }
 
-    public java.util.List<Order> procesarPedidosDisponibles() {
-        if (!ensureConnected()) return new java.util.ArrayList<>();
+    public LinkedList<Order> procesarPedidosDisponibles() {
+        if (!ensureConnected()) return new LinkedList<>();
         try {
             return kitchenService.procesarPedidosDisponibles();
         } catch (Exception e) {
             updateLogger("Error al procesar pedidos disponibles: " + e.getMessage());
-            return new java.util.ArrayList<>();
+            return new LinkedList<>();
         }
     }
 
@@ -454,18 +454,14 @@ public class ClientModel extends Subject {
         }
     }
 
-    public java.util.List<Order> getPedidosEnPreparacion() {
-        if (!ensureConnected()) return new java.util.ArrayList<>();
+    public LinkedList<Order> getPedidosEnPreparacion() {
+        if (!ensureConnected()) return new LinkedList<>();
         try {
             LinkedList<Order> lista = orderService.getPedidosEnPreparacion();
-            java.util.List<Order> resultado = new java.util.ArrayList<>();
-            if (lista == null) return resultado;
-            edu.fsadriann.model.iterator.Iterator<Order> it = lista.iterator();
-            while (it.hasNext()) { Order o = it.next(); if (o != null) resultado.add(o); }
-            return resultado;
+            return lista != null ? lista : new LinkedList<>();
         } catch (Exception e) {
             updateLogger("Error al obtener pedidos en preparación: " + e.getMessage());
-            return new java.util.ArrayList<>();
+            return new LinkedList<>();
         }
     }
 

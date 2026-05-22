@@ -76,10 +76,12 @@ public class KitchenController {
 
     private void refresh() {
         try {
-            java.util.List<Order> pedidos = model.getPedidosEnPreparacion();
+            LinkedList<Order> pedidos = model.getPedidosEnPreparacion();
 
             int nuevos = 0;
-            for (Order order : pedidos) {
+            Iterator<Order> itP = pedidos.iterator();
+            while (itP.hasNext()) {
+                Order order = itP.next();
                 if (order == null) continue;
                 String id = order.getOrderId();
 
@@ -119,8 +121,10 @@ public class KitchenController {
     // ── Mover pedidos compatibles a fogones disponibles ───────────────────────
 
     private void intentarPasarAFogon() {
-        java.util.List<Order> procesados = model.procesarPedidosDisponibles();
-        for (Order processed : procesados) {
+        LinkedList<Order> procesados = model.procesarPedidosDisponibles();
+        Iterator<Order> itPr = procesados.iterator();
+        while (itPr.hasNext()) {
+            Order processed = itPr.next();
             if (processed == null) continue;
             mostrarPedidoEnFogon(processed);
         }

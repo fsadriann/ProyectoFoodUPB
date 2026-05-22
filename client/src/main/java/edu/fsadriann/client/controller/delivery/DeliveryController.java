@@ -9,10 +9,10 @@ import edu.fsadriann.server.model.order.EstadoPedido;
 import edu.fsadriann.server.model.order.Order;
 import edu.fsadriann.view.delivery.DeliveryView;
 
+import edu.fsadriann.model.iterator.Iterator;
+
 import javax.swing.*;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class DeliveryController {
@@ -97,11 +97,10 @@ public class DeliveryController {
         int listos = 0, enTransito = 0, entregados = 0, pendientes = 0;
         Map<String, Integer> pedidosPorCuadrante = new HashMap<>();
 
-        // Agrupar pedidos por repartidor
-        Map<String, java.util.List<Order>> gruposPorRepartidor = new java.util.LinkedHashMap<>();
-        java.util.List<Order> sinRepartidor = new java.util.ArrayList<>();
+        Map<String, LinkedList<Order>> gruposPorRepartidor = new java.util.LinkedHashMap<>();
+        LinkedList<Order> sinRepartidor = new LinkedList<>();
 
-        edu.fsadriann.model.iterator.Iterator<Order> it = todos.iterator();
+        Iterator<Order> it = todos.iterator();
         while (it.hasNext()) {
             Order o = it.next();
             if (o == null) continue;
@@ -117,7 +116,7 @@ public class DeliveryController {
                     if (asignado) {
                         gruposPorRepartidor
                                 .computeIfAbsent(delivery.getRepartidorId(),
-                                        k -> new java.util.ArrayList<>())
+                                        k -> new LinkedList<>())
                                 .add(o);
                     } else {
                         sinRepartidor.add(o);
@@ -138,7 +137,7 @@ public class DeliveryController {
                     if (asignado) {
                         gruposPorRepartidor
                                 .computeIfAbsent(delivery.getRepartidorId(),
-                                        k -> new java.util.ArrayList<>())
+                                        k -> new LinkedList<>())
                                 .add(o);
                     } else {
                         sinRepartidor.add(o);
@@ -156,10 +155,12 @@ public class DeliveryController {
             }
         }
 
-        // Mostrar pedidos sin repartidor individualmente
-        for (Order o : sinRepartidor) {
-            String cuad      = o.getCuadranteDestino();
-            String cliente   = o.getCedulaCliente() != null ? o.getCedulaCliente() : "—";
+        Iterator<Order> itSin = sinRepartidor.iterator();
+        while (itSin.hasNext()) {
+            Order o = itSin.next();
+            if (o == null) continue;
+            String cuad        = o.getCuadranteDestino();
+            String cliente     = o.getCedulaCliente() != null ? o.getCedulaCliente() : "—";
             String cuadDisplay = (cuad != null && !cuad.isBlank() && !cuad.equals("—"))
                     ? cuad : "Sin cuadrante";
             view.addOrderCard(
@@ -170,19 +171,22 @@ public class DeliveryController {
             );
         }
 
-        // Mostrar grupos por repartidor
-        for (Map.Entry<String, java.util.List<Order>> entry : gruposPorRepartidor.entrySet()) {
-            String rep = entry.getKey();
-            java.util.List<Order> grupo = entry.getValue();
+        for (Map.Entry<String, LinkedList<Order>> entry : gruposPorRepartidor.entrySet()) {
+            String rep              = entry.getKey();
+            LinkedList<Order> grupo = entry.getValue();
 
-            java.util.List<String> ids      = new java.util.ArrayList<>();
-            java.util.List<String> clientes = new java.util.ArrayList<>();
-            java.util.List<String> cuads    = new java.util.ArrayList<>();
-            java.util.List<Runnable> acciones = new java.util.ArrayList<>();
+            LinkedList<String>   ids      = new LinkedList<>();
+            LinkedList<String>   clientes = new LinkedList<>();
+            LinkedList<String>   cuads    = new LinkedList<>();
+            LinkedList<Runnable> acciones = new LinkedList<>();
 
-            EstadoPedido estadoGrupo = grupo.get(0).getEstado();
+            Object[] grupoArr = grupo.toArray();
+            EstadoPedido estadoGrupo = ((Order) grupoArr[0]).getEstado();
 
-            for (Order o : grupo) {
+            Iterator<Order> itG = grupo.iterator();
+            while (itG.hasNext()) {
+                Order o = itG.next();
+                if (o == null) continue;
                 ids.add(o.getOrderId());
                 clientes.add(o.getCedulaCliente() != null ? o.getCedulaCliente() : "—");
                 String cuad = o.getCuadranteDestino();
@@ -193,11 +197,9 @@ public class DeliveryController {
 
             view.addGroupCard(
                     rep, ids, clientes, cuads, estadoGrupo,
-                    // Iniciar todas
                     estadoGrupo == EstadoPedido.LISTO
                             ? () -> handleIniciarGrupo(grupo)
                             : null,
-                    // Entregar individualmente
                     estadoGrupo == EstadoPedido.EN_CAMINO ? acciones : null
             );
         }
@@ -212,7 +214,7 @@ public class DeliveryController {
 
     // ── Handlers de acciones ──────────────────────────────────────────────────
 
-    private void handleIniciarGrupo(java.util.List<Order> grupo) {
+    private void handleIniciarGrupo(LinkedList<Order> grupo) {
         if (!rutaCalculada) {
             view.showError("Debes calcular la ruta óptima antes de iniciar la entrega.\n"
                     + "Presiona el botón \"Calcular ruta óptima\".");
@@ -222,8 +224,10 @@ public class DeliveryController {
         if (!view.confirm("¿Iniciar entrega de " + grupo.size() + " pedido(s) a la vez?")) return;
 
         int iniciados = 0;
-        for (Order o : grupo) {
-            if (model.iniciarEntrega(o.getOrderId())) iniciados++;
+        Iterator<Order> it = grupo.iterator();
+        while (it.hasNext()) {
+            Order o = it.next();
+            if (o != null && model.iniciarEntrega(o.getOrderId())) iniciados++;
         }
 
         view.setMessage(iniciados + " pedido(s) iniciados en camino.");
@@ -291,13 +295,12 @@ public class DeliveryController {
     // ── Ruta ──────────────────────────────────────────────────────────────────
 
     private void handleCalcularRuta() {
-        // Agrupar destinos por repartidor
-        Map<String, java.util.List<String>> destinosPorRepartidor = new java.util.LinkedHashMap<>();
-        java.util.List<String> destinosSinRepartidor = new java.util.ArrayList<>();
+        Map<String, LinkedList<String>> destinosPorRepartidor = new java.util.LinkedHashMap<>();
+        LinkedList<String> destinosSinRepartidor = new LinkedList<>();
 
         LinkedList<Order> todos = model.getPedidosTodos();
         if (todos != null) {
-            edu.fsadriann.model.iterator.Iterator<Order> it = todos.iterator();
+            Iterator<Order> it = todos.iterator();
             while (it.hasNext()) {
                 Order o = it.next();
                 if (o == null) continue;
@@ -310,8 +313,7 @@ public class DeliveryController {
                 if (delivery != null && delivery.getRepartidorId() != null
                         && !delivery.getRepartidorId().isBlank()) {
                     destinosPorRepartidor
-                            .computeIfAbsent(delivery.getRepartidorId(),
-                                    k -> new java.util.ArrayList<>())
+                            .computeIfAbsent(delivery.getRepartidorId(), k -> new LinkedList<>())
                             .add(cuad);
                 } else {
                     if (!destinosSinRepartidor.contains(cuad))
@@ -326,22 +328,32 @@ public class DeliveryController {
             return;
         }
 
-        // Calcular ruta combinada para mostrar en el grafo
-        java.util.List<String> todosDestinos = new java.util.ArrayList<>(destinosSinRepartidor);
-        for (java.util.List<String> cuads : destinosPorRepartidor.values())
-            for (String c : cuads) if (!todosDestinos.contains(c)) todosDestinos.add(c);
+        LinkedList<String> todosDestinos = new LinkedList<>();
+        Iterator<String> itDs = destinosSinRepartidor.iterator();
+        while (itDs.hasNext()) { String s = itDs.next(); if (s != null) todosDestinos.add(s); }
 
-        java.util.List<String> rutaOrdenada = calcularRutaGreedy(ORIGEN, todosDestinos);
+        for (LinkedList<String> cuads : destinosPorRepartidor.values()) {
+            Iterator<String> itC = cuads.iterator();
+            while (itC.hasNext()) {
+                String c = itC.next();
+                if (c != null && !todosDestinos.contains(c)) todosDestinos.add(c);
+            }
+        }
+
+        LinkedList<String> rutaOrdenada = calcularRutaGreedy(ORIGEN, todosDestinos);
         LinkedList<String> rutaCompleta = new LinkedList<>();
         double distanciaTotal = 0;
         String actual = ORIGEN;
         rutaCompleta.add(ORIGEN);
 
-        for (String destino : rutaOrdenada) {
+        Iterator<String> itR = rutaOrdenada.iterator();
+        while (itR.hasNext()) {
+            String destino = itR.next();
+            if (destino == null) continue;
             LinkedList<String> tramo     = model.calcularRutaMasCorta(actual, destino);
             double             distTramo = model.calcularDistanciaCuadrantes(actual, destino);
             if (tramo == null || distTramo < 0) continue;
-            edu.fsadriann.model.iterator.Iterator<String> itT = tramo.iterator();
+            Iterator<String> itT = tramo.iterator();
             boolean primero = true;
             while (itT.hasNext()) {
                 String nodo = itT.next();
@@ -355,26 +367,28 @@ public class DeliveryController {
         view.setRuta(rutaCompleta, distanciaTotal);
         rutaCalculada = true;
 
-        // Mensaje detallado por repartidor
         StringBuilder msg = new StringBuilder("Ruta calculada. ");
-        for (Map.Entry<String, java.util.List<String>> entry : destinosPorRepartidor.entrySet()) {
-            msg.append(entry.getKey())
-                    .append(": ")
-                    .append(entry.getValue())
-                    .append("  ");
+        for (Map.Entry<String, LinkedList<String>> entry : destinosPorRepartidor.entrySet()) {
+            msg.append(entry.getKey()).append(": ").append(entry.getValue()).append("  ");
         }
         view.setMessage(msg.toString());
     }
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private List<String> calcularRutaGreedy(String origen, List<String> destinos) {
-        List<String> pendientes = new ArrayList<>(destinos);
-        List<String> ruta       = new ArrayList<>();
-        String actual           = origen;
+    private LinkedList<String> calcularRutaGreedy(String origen, LinkedList<String> destinos) {
+        LinkedList<String> pendientes = new LinkedList<>();
+        Iterator<String> itCopy = destinos.iterator();
+        while (itCopy.hasNext()) { String s = itCopy.next(); if (s != null) pendientes.add(s); }
+
+        LinkedList<String> ruta = new LinkedList<>();
+        String actual = origen;
         while (!pendientes.isEmpty()) {
             String masCercano     = null;
             double menorDistancia = Double.MAX_VALUE;
-            for (String candidato : pendientes) {
+            Iterator<String> itCand = pendientes.iterator();
+            while (itCand.hasNext()) {
+                String candidato = itCand.next();
+                if (candidato == null) continue;
                 double dist = model.calcularDistanciaCuadrantes(actual, candidato);
                 if (dist >= 0 && dist < menorDistancia) {
                     menorDistancia = dist;
@@ -389,11 +403,11 @@ public class DeliveryController {
         return ruta;
     }
 
-    private List<String> getDestinosConPedidos() {
-        List<String> destinos = new ArrayList<>();
+    private LinkedList<String> getDestinosConPedidos() {
+        LinkedList<String> destinos = new LinkedList<>();
         LinkedList<Order> todos = model.getPedidosTodos();
         if (todos == null) return destinos;
-        edu.fsadriann.model.iterator.Iterator<Order> it = todos.iterator();
+        Iterator<Order> it = todos.iterator();
         while (it.hasNext()) {
             Order o = it.next();
             if (o == null) continue;

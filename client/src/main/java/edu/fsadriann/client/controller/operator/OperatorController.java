@@ -114,13 +114,16 @@ public class OperatorController {
 
 		// Cargar cuadrantes en el selector
 		LinkedList<edu.fsadriann.server.model.cuadrante.Cuadrante> cuads = model.listarCuadrantes();
-		java.util.List<String> nombres = new java.util.ArrayList<>();
-		edu.fsadriann.model.iterator.Iterator<edu.fsadriann.server.model.cuadrante.Cuadrante> itC = cuads.iterator();
+		LinkedList<String> nombres = new LinkedList<>();
+		Iterator<edu.fsadriann.server.model.cuadrante.Cuadrante> itC = cuads.iterator();
 		while (itC.hasNext()) {
 			edu.fsadriann.server.model.cuadrante.Cuadrante c = itC.next();
 			if (c != null && !"UPB".equals(c.getNombre())) nombres.add(c.getNombre());
 		}
-		view.setCuadrantesDisponibles(nombres.toArray(new String[0]));
+		Object[] raw = nombres.toArray();
+		String[] nombresArr = new String[raw.length];
+		for (int i = 0; i < raw.length; i++) nombresArr[i] = (String) raw[i];
+		view.setCuadrantesDisponibles(nombresArr);
 
 		// Detectar cuadrante por dirección
 		String direccion          = client.getDireccion();

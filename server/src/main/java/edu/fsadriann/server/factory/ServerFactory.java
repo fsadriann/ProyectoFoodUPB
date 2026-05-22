@@ -6,11 +6,21 @@ import edu.fsadriann.server.model.ServerModel;
 import edu.fsadriann.server.model.history.History;
 import edu.fsadriann.server.view.ServerView;
 
+/**
+ * Fábrica que construye y conecta todos los componentes del servidor Food UPB.
+ * Sigue el patrón Factory para centralizar la creación de la aplicación servidor.
+ */
 public class ServerFactory {
 
     private ServerFactory() {
     }
 
+    /**
+     * Crea e inicializa el controlador del servidor con todos sus dependencias.
+     *
+     * @return controlador del servidor listo para mostrar
+     * @throws IllegalStateException si alguno de los componentes no pudo crearse
+     */
     public static ServerController create() {
 
         Environment env = Environment.getInstance();

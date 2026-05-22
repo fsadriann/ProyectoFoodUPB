@@ -7,6 +7,9 @@ import edu.fsadriann.server.model.product.Product;
 import edu.fsadriann.server.model.user.User;
 import edu.fsadriann.view.operator.OperatorView;
 
+import edu.fsadriann.app.linkedlist.singly.singly.LinkedList;
+import edu.fsadriann.model.iterator.Iterator;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.text.NumberFormat;
@@ -22,7 +25,7 @@ public class OrderController {
 	private final OperatorModel  model;
 	private final OperatorView view;
 
-	private java.util.List<Product> currentOrderProducts = new java.util.ArrayList<>();
+	private LinkedList<Product> currentOrderProducts = new LinkedList<>();
 
 	public OrderController(OperatorModel model, OperatorView view) {
 		this.model = model;
@@ -80,7 +83,8 @@ public class OrderController {
 		int existingIndex = findProductInCurrentOrder(product.getProductoId());
 
 		if (existingIndex >= 0) {
-			Product existing = currentOrderProducts.get(existingIndex);
+			Object[] orderArr0 = currentOrderProducts.toArray();
+			Product existing = (Product) orderArr0[existingIndex];
 			existing.setCantidad(existing.getCantidad() + 1);
 
 			DefaultTableModel tableModel = view.getCurrentOrderModel();
@@ -127,11 +131,12 @@ public class OrderController {
 			return;
 		}
 
-		Product toRemove = currentOrderProducts.get(row);
+		Object[] orderArr1 = currentOrderProducts.toArray();
+		Product toRemove = (Product) orderArr1[row];
 		boolean removed = model.quitarProductoAPedido(order.getOrderId(), toRemove);
 
 		if (removed) {
-			currentOrderProducts.remove(row);
+			currentOrderProducts.remove(toRemove);
 			view.getCurrentOrderModel().removeRow(row);
 			view.clearOrderSelection(); // FIX 3: limpiar selección guardada
 			refreshOrderTotal();        // FIX 2: actualizar total
@@ -156,7 +161,8 @@ public class OrderController {
 			return;
 		}
 
-		Product product = currentOrderProducts.get(row);
+		Object[] orderArr2 = currentOrderProducts.toArray();
+		Product product = (Product) orderArr2[row];
 		String input = JOptionPane.showInputDialog(
 				null,
 				"Nueva cantidad para «" + product.getNombre() + "»:",
@@ -227,11 +233,12 @@ public class OrderController {
 		double serverTotal = model.calcularFactura(order);
 
 		double subtotal = 0.0;
-		for (Product p : currentOrderProducts) {
-			subtotal += (double) p.getPrecio() * p.getCantidad();
+		Iterator<Product> itSub = currentOrderProducts.iterator();
+		while (itSub.hasNext()) {
+			Product p = itSub.next();
+			if (p != null) subtotal += (double) p.getPrecio() * p.getCantidad();
 		}
 		double iva   = subtotal * IVA;
-		// Usar el domicilio real calculado por el servidor (Dijkstra desde UPB)
 		double domi  = order.isPremium() ? 0.0 : Math.max(0, serverTotal - subtotal - iva);
 		double total = serverTotal > 0 ? serverTotal : (subtotal + iva + domi);
 
@@ -250,7 +257,10 @@ public class OrderController {
 
 		DefaultTableModel invoiceModel = view.getInvoiceOrderModel();
 		invoiceModel.setRowCount(0);
-		for (Product p : currentOrderProducts) {
+		Iterator<Product> itInv = currentOrderProducts.iterator();
+		while (itInv.hasNext()) {
+			Product p = itInv.next();
+			if (p == null) continue;
 			invoiceModel.addRow(new Object[]{
 					p.getNombre(),
 					p.getCantidad(),
@@ -335,8 +345,10 @@ public class OrderController {
 	// Accesible desde OperatorController para refrescar cuando cambia el cuadrante
     public void refreshOrderTotal() {
 		double subtotal = 0.0;
-		for (Product p : currentOrderProducts) {
-			subtotal += (double) p.getPrecio() * p.getCantidad();
+		Iterator<Product> itR = currentOrderProducts.iterator();
+		while (itR.hasNext()) {
+			Product p = itR.next();
+			if (p != null) subtotal += (double) p.getPrecio() * p.getCantidad();
 		}
 		Order order = model.getCurrentOrder();
 		boolean isPremium = order != null && order.isPremium();
@@ -381,8 +393,10 @@ public class OrderController {
 	}
 
 	private int findProductInCurrentOrder(String productoId) {
-		for (int i = 0; i < currentOrderProducts.size(); i++) {
-			if (productoId.equals(currentOrderProducts.get(i).getProductoId())) return i;
+		Object[] arr = currentOrderProducts.toArray();
+		for (int i = 0; i < arr.length; i++) {
+			Product p = (Product) arr[i];
+			if (p != null && productoId.equals(p.getProductoId())) return i;
 		}
 		return -1;
 	}

@@ -400,13 +400,16 @@ public class AdminController {
 
     private String[] getCuadrantesNombres() {
         LinkedList<Cuadrante> cuads = model.listarCuadrantes();
-        java.util.List<String> nombres = new java.util.ArrayList<>();
+        LinkedList<String> nombres = new LinkedList<>();
         edu.fsadriann.model.iterator.Iterator<Cuadrante> it = cuads.iterator();
         while (it.hasNext()) {
             Cuadrante c = it.next();
             if (c != null && !"UPB".equals(c.getNombre())) nombres.add(c.getNombre());
         }
-        return nombres.toArray(new String[0]);
+        Object[] raw = nombres.toArray();
+        String[] arr = new String[raw.length];
+        for (int i = 0; i < raw.length; i++) arr[i] = (String) raw[i];
+        return arr;
     }
 
     private Rol parseRol(String rol) {

@@ -1,11 +1,9 @@
 package edu.fsadriann.client.model.kitchen;
 
+import edu.fsadriann.app.linkedlist.singly.singly.LinkedList;
 import edu.fsadriann.server.model.order.KitchenInterface;
 import edu.fsadriann.server.model.order.Order;
 import edu.fsadriann.server.model.order.OrderInterface;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class KitchenModel {
 
@@ -23,8 +21,6 @@ public class KitchenModel {
         return kitchenService != null && orderService != null;
     }
 
-    // ── Cola de cocina ────────────────────────────────────────────────────────
-
     public void encolarPedido(Order pedido) {
         if (!isConnected()) return;
         try {
@@ -34,13 +30,13 @@ public class KitchenModel {
         }
     }
 
-    public List<Order> procesarPedidosDisponibles() {
-        if (!isConnected()) return new ArrayList<>();
+    public LinkedList<Order> procesarPedidosDisponibles() {
+        if (!isConnected()) return new LinkedList<>();
         try {
             return kitchenService.procesarPedidosDisponibles();
         } catch (Exception e) {
             System.err.println("Error al procesar pedidos disponibles: " + e.getMessage());
-            return new ArrayList<>();
+            return new LinkedList<>();
         }
     }
 
@@ -82,28 +78,16 @@ public class KitchenModel {
         }
     }
 
-    // ── Pedidos en preparación ────────────────────────────────────────────────
-
-    public List<Order> getPedidosEnPreparacion() {
-        if (!isConnected()) return new ArrayList<>();
+    public LinkedList<Order> getPedidosEnPreparacion() {
+        if (!isConnected()) return new LinkedList<>();
         try {
-            edu.fsadriann.app.linkedlist.singly.singly.LinkedList<Order> lista =
-                    orderService.getPedidosEnPreparacion();
-            List<Order> resultado = new ArrayList<>();
-            if (lista == null) return resultado;
-            edu.fsadriann.model.iterator.Iterator<Order> it = lista.iterator();
-            while (it.hasNext()) {
-                Order o = it.next();
-                if (o != null) resultado.add(o);
-            }
-            return resultado;
+            LinkedList<Order> lista = orderService.getPedidosEnPreparacion();
+            return lista != null ? lista : new LinkedList<>();
         } catch (Exception e) {
             System.err.println("Error al obtener pedidos en preparación: " + e.getMessage());
-            return new ArrayList<>();
+            return new LinkedList<>();
         }
     }
 
-    public void logout() {
-
-    }
+    public void logout() {}
 }

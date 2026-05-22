@@ -11,6 +11,10 @@ import edu.fsadriann.server.model.user.UserService;
 
 import java.rmi.RemoteException;
 
+/**
+ * Servicio de administración del sistema Food UPB.
+ * Gestiona operadores, roles, reportes de pedidos y la bitácora de auditoría.
+ */
 public class AdminService implements AdminInterface {
 
     private final LinkedList<User>   operadores;
@@ -18,14 +22,24 @@ public class AdminService implements AdminInterface {
     private final LinkedList<String> bitacora;
     private final UserService        userService;
     private final ProductService     productService;
-    private final OrderService orderService;
+    private final OrderService       orderService;
 
-
+    /**
+     * Crea el servicio de administración sin integración con otros servicios.
+     */
     public AdminService() {
         this(null, null, null);
     }
 
-    public AdminService(UserService userService, ProductService productService, OrderService orderService) {
+    /**
+     * Crea el servicio de administración con acceso a los demás servicios del sistema.
+     *
+     * @param userService    servicio de usuarios para leer la bitácora de sesiones
+     * @param productService servicio de productos (disponible para futuras extensiones)
+     * @param orderService   servicio de pedidos para consultar el historial completo
+     */
+    public AdminService(UserService userService, ProductService productService,
+                        OrderService orderService) {
         this.operadores     = new LinkedList<>();
         this.bitacora       = new LinkedList<>();
         this.pedidos        = new LinkedList<>();
@@ -34,6 +48,13 @@ public class AdminService implements AdminInterface {
         this.orderService   = orderService;
     }
 
+    /**
+     * Registra un nuevo operador en el sistema.
+     * Si el operador no tiene rol asignado, se le asigna {@link Rol#OPERADOR} por defecto.
+     *
+     * @param operador datos del operador a crear
+     * @return {@code true} si se creó exitosamente; {@code false} si ya existe
+     */
     @Override
     public boolean crearOperador(User operador) throws RemoteException {
         if (operador == null || operador.getCedula() == null) return false;
@@ -58,6 +79,12 @@ public class AdminService implements AdminInterface {
         return true;
     }
 
+    /**
+     * Actualiza los datos de un operador existente.
+     *
+     * @param operador datos actualizados del operador
+     * @return {@code true} si se editó exitosamente
+     */
     @Override
     public boolean editarOperador(User operador) throws RemoteException {
         if (operador == null || operador.getCedula() == null) return false;
@@ -86,6 +113,12 @@ public class AdminService implements AdminInterface {
         return true;
     }
 
+    /**
+     * Elimina un operador del sistema por su cédula.
+     *
+     * @param cedula cédula del operador a eliminar
+     * @return {@code true} si se eliminó exitosamente
+     */
     @Override
     public boolean eliminarOperador(String cedula) throws RemoteException {
         if (cedula == null) return false;
@@ -95,6 +128,13 @@ public class AdminService implements AdminInterface {
         return true;
     }
 
+    /**
+     * Asigna un nuevo rol a un operador registrado.
+     *
+     * @param cedula cédula del operador
+     * @param rol    nuevo rol a asignar
+     * @return {@code true} si se asignó exitosamente
+     */
     @Override
     public boolean asignarRol(String cedula, Rol rol) throws RemoteException {
         if (cedula == null || rol == null) return false;
@@ -120,9 +160,17 @@ public class AdminService implements AdminInterface {
         return true;
     }
 
+    /**
+     * Genera un reporte de pedidos aplicando filtros opcionales por estado y cuadrante.
+     * Los parámetros {@code null} o en blanco no aplican filtro en ese campo.
+     *
+     * @param filtroFecha     fecha a filtrar (no implementado aún)
+     * @param filtroEstado    estado del pedido a filtrar
+     * @param filtroCuadrante cuadrante de destino a filtrar
+     * @return lista de pedidos que cumplen los criterios
+     */
     @Override
-    public LinkedList<Order> generarReporte(String filtroFecha,
-                                            String filtroEstado,
+    public LinkedList<Order> generarReporte(String filtroFecha, String filtroEstado,
                                             String filtroCuadrante) throws RemoteException {
         LinkedList<Order> resultado = new LinkedList<>();
         Iterator<Order> it = pedidos.iterator();
@@ -142,10 +190,20 @@ public class AdminService implements AdminInterface {
         return resultado;
     }
 
+    /**
+     * Retorna la bitácora de acciones registradas por este servicio de administración.
+     *
+     * @return lista de entradas de la bitácora local
+     */
     public LinkedList<String> getBitacora() {
         return bitacora;
     }
 
+    /**
+     * Retorna la bitácora consolidada de auditoría, combinando la local con la del servicio de usuarios.
+     *
+     * @return lista completa de eventos de auditoría
+     */
     @Override
     public LinkedList<String> verBitacoraAuditoria() throws RemoteException {
         LinkedList<String> todas = new LinkedList<>();
@@ -164,6 +222,11 @@ public class AdminService implements AdminInterface {
         return todas;
     }
 
+    /**
+     * Retorna todos los pedidos del sistema obtenidos desde el servicio de pedidos.
+     *
+     * @return lista completa de pedidos, o lista vacía si el servicio no está disponible
+     */
     @Override
     public LinkedList<Order> getPedidosTodos() throws RemoteException {
         if (orderService == null) return new LinkedList<>();

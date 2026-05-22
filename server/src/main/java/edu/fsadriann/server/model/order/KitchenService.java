@@ -1,38 +1,51 @@
 package edu.fsadriann.server.model.order;
 
+import edu.fsadriann.app.linkedlist.singly.singly.LinkedList;
 import edu.fsadriann.app.priorityqueue.PriorityQueue;
 import edu.fsadriann.server.model.product.Product;
 import edu.fsadriann.model.iterator.Iterator;
 
-import java.rmi.RemoteException;
-import java.util.List;
-
+/**
+ * Servicio de cocina que gestiona la cola de pedidos y el estado de los fogones.
+ * Usa una cola de prioridad con dos niveles: 0 para clientes premium, 1 para estándar.
+ * Los pedidos con productos complejos se asignan al fogón grande; los demás, a los normales.
+ */
 public class KitchenService implements KitchenInterface {
 
     private static final int NIVELES_PRIORIDAD = 2;
 
     private final PriorityQueue<Order> cola;
+    private final OrderService         orderService;
 
-    private final OrderService orderService;
+    private Order fogonGrande;
+    private Order fogonNormal1;
+    private Order fogonNormal2;
+    private Order fogonNormal3;
 
-    // ── Constructores ─────────────────────────────────────────────────────────────
+    /**
+     * Crea el servicio de cocina sin integración con {@link OrderService}.
+     */
     public KitchenService() {
         this(null);
     }
 
+    /**
+     * Crea el servicio de cocina con integración al servicio de pedidos.
+     *
+     * @param orderService servicio de pedidos para actualizar estados al marcar como listo
+     */
     public KitchenService(OrderService orderService) {
         this.cola         = new PriorityQueue<>(NIVELES_PRIORIDAD);
         this.orderService = orderService;
     }
 
-    // ── Estado de fogones (null = libre) ─────────────────────────────────────
-    private Order fogonGrande;    // FOGON_GRANDE  — pedidos complejos
-    private Order fogonNormal1;   // FOGON_NORMAL_1
-    private Order fogonNormal2;   // FOGON_NORMAL_2
-    private Order fogonNormal3;   // FOGON_NORMAL_3
-
-    // ── encolarPedido ─────────────────────────────────────────────────────────
-
+    /**
+     * Agrega un pedido a la cola según su prioridad (premium = mayor prioridad).
+     *
+     * @param pedido pedido a encolar
+     * @throws IllegalArgumentException si el pedido es nulo
+     * @throws IllegalStateException    si el pedido está cancelado o entregado
+     */
     @Override
     public void encolarPedido(Order pedido) {
         if (pedido == null)
@@ -43,6 +56,12 @@ public class KitchenService implements KitchenInterface {
         cola.insert(pedido.isPremium() ? 0 : 1, pedido);
     }
 
+    /**
+     * Extrae el pedido de mayor prioridad y lo asigna al fogón disponible correspondiente.
+     * Los pedidos complejos van al fogón grande; los simples, al primer fogón normal libre.
+     *
+     * @return el pedido asignado al fogón, o {@code null} si no hay fogón libre
+     */
     @Override
     public Order procesarSiguientePedido() {
         if (cola.isEmpty()) return null;
@@ -57,9 +76,8 @@ public class KitchenService implements KitchenInterface {
                 fogonGrande = siguiente;
                 return siguiente;
             }
-            return null; // FOGON_GRANDE ocupado, pedido espera en cola
+            return null;
         } else {
-            // Simple: primer fogón normal libre
             if (fogonNormal1 == null) {
                 cola.extract();
                 siguiente.setEstado(EstadoPedido.EN_PREPARACION);
@@ -76,10 +94,19 @@ public class KitchenService implements KitchenInterface {
                 fogonNormal3 = siguiente;
                 return siguiente;
             }
-            return null; // todos los fogones normales ocupados, pedido espera
+            return null;
         }
     }
 
+    /**
+     * Marca un pedido en preparación como listo y libera el fogón que ocupaba.
+     *
+     * @param pedidoId identificador del pedido
+     * @return {@code true} si se marcó exitosamente
+     * @throws IllegalArgumentException si el pedidoId es nulo
+     * @throws IllegalStateException    si el pedido no está en ningún fogón activo
+     *                                  o no está en estado EN_PREPARACION
+     */
     @Override
     public boolean marcarPedidoListo(String pedidoId) {
         if (pedidoId == null)
@@ -94,15 +121,13 @@ public class KitchenService implements KitchenInterface {
                 "Solo se marca LISTO desde EN_PREPARACION. Estado: " + enFogon.getEstado());
 
         if (orderService != null) {
-            orderService.marcarListo(pedidoId); // delega setEstado(LISTO) + actualizar()
+            orderService.marcarListo(pedidoId);
         } else {
-            enFogon.setEstado(EstadoPedido.LISTO); // legacy: mutación directa
+            enFogon.setEstado(EstadoPedido.LISTO);
         }
         liberarFogon(pedidoId);
         return true;
     }
-
-    // ── obtenerEstadoFogones ──────────────────────────────────────────────────
 
     /** {@inheritDoc} */
     @Override
@@ -113,30 +138,36 @@ public class KitchenService implements KitchenInterface {
                "FOGON_NORMAL_3 : " + descripcionFogon(fogonNormal3);
     }
 
-    // ── Consultas ─────────────────────────────────────────────────────────────
-
-    @Override public int tamanoCola()  {
-        return cola.size();
-    }
-    @Override public boolean colaVacia() {
-        return cola.isEmpty();
-    }
-
+    /** @return cantidad de pedidos en espera en la cola */
     @Override
-    public java.util.List<Order> procesarPedidosDisponibles() {
-        java.util.List<Order> procesados = new java.util.ArrayList<>();
+    public int tamanoCola() { return cola.size(); }
+
+    /** @return {@code true} si no hay pedidos en la cola */
+    @Override
+    public boolean colaVacia() { return cola.isEmpty(); }
+
+    /**
+     * Procesa todos los pedidos de la cola que tengan un fogón compatible disponible.
+     * Los pedidos que no puedan asignarse vuelven a la cola manteniendo su prioridad.
+     *
+     * @return lista de pedidos que fueron asignados a fogones
+     */
+    @Override
+    public LinkedList<Order> procesarPedidosDisponibles() {
+        LinkedList<Order> procesados = new LinkedList<>();
         if (cola.isEmpty()) return procesados;
 
-        // Extraemos todos los pedidos de la cola temporalmente
-        java.util.List<Order> pendientes = new java.util.ArrayList<>();
+        LinkedList<Order> pendientes = new LinkedList<>();
         while (!cola.isEmpty()) {
             Order o = cola.extract();
             if (o != null) pendientes.add(o);
         }
 
-        // Intentamos asignar cada uno al fogón compatible
-        java.util.List<Order> devolver = new java.util.ArrayList<>();
-        for (Order o : pendientes) {
+        LinkedList<Order> devolver = new LinkedList<>();
+        Iterator<Order> it = pendientes.iterator();
+        while (it.hasNext()) {
+            Order o = it.next();
+            if (o == null) continue;
             boolean asignado = false;
             if (esComplejo(o)) {
                 if (fogonGrande == null) {
@@ -166,20 +197,15 @@ public class KitchenService implements KitchenInterface {
             if (!asignado) devolver.add(o);
         }
 
-        // Re-encolar los que no pudieron asignarse, respetando prioridad
-        for (Order o : devolver) {
-            cola.insert(o.isPremium() ? 0 : 1, o);
+        Iterator<Order> itD = devolver.iterator();
+        while (itD.hasNext()) {
+            Order o = itD.next();
+            if (o != null) cola.insert(o.isPremium() ? 0 : 1, o);
         }
 
         return procesados;
     }
 
-    // ── Helpers privados ──────────────────────────────────────────────────────
-
-    /**
-     * Determina si el pedido contiene algún producto complejo.
-     * Usa el {@code Iterator} tipado del JAR para evitar ClassCastException.
-     */
     private boolean esComplejo(Order pedido) {
         Iterator<Product> it = pedido.getCarrito().iterator();
         while (it.hasNext()) {
@@ -189,7 +215,6 @@ public class KitchenService implements KitchenInterface {
         return false;
     }
 
-    /** Busca el pedido activo en cualquiera de los 4 fogones. */
     private Order buscarEnFogones(String pedidoId) {
         if (fogonGrande  != null && pedidoId.equals(fogonGrande.getOrderId()))  return fogonGrande;
         if (fogonNormal1 != null && pedidoId.equals(fogonNormal1.getOrderId())) return fogonNormal1;
@@ -198,7 +223,6 @@ public class KitchenService implements KitchenInterface {
         return null;
     }
 
-    /** Libera el fogón que contenía el pedido (lo pone en null). */
     private void liberarFogon(String pedidoId) {
         if (fogonGrande  != null && pedidoId.equals(fogonGrande.getOrderId()))  { fogonGrande  = null; return; }
         if (fogonNormal1 != null && pedidoId.equals(fogonNormal1.getOrderId())) { fogonNormal1 = null; return; }

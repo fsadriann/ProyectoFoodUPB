@@ -14,42 +14,58 @@ import edu.fsadriann.server.model.order.OrderService;
 import edu.fsadriann.server.model.product.ProductService;
 import edu.fsadriann.server.model.user.UserService;
 
+/**
+ * Modelo principal del servidor Food UPB.
+ * Gestiona el ciclo de vida del registro RMI y el enlace de todos los servicios remotos.
+ */
 public class ServerModel {
 
-    private String ip;
-    private int port;
-    private String serviceName;
-    private String uri;
+    private String   ip;
+    private int      port;
+    private String   serviceName;
+    private String   uri;
     private Registry registry;
-    private boolean createdRegistry = false;
-    private boolean running = false;
+    private boolean  createdRegistry = false;
+    private boolean  running         = false;
 
     private CuadranteService cuadranteService;
-    private DeliveryService deliveryService;
-    private UserService userService;
-    private ProductService productService;
-    private OrderService orderService;
-    private KitchenService kitchenService;
-    private AdminService adminService;
+    private DeliveryService  deliveryService;
+    private UserService      userService;
+    private ProductService   productService;
+    private OrderService     orderService;
+    private KitchenService   kitchenService;
+    private AdminService     adminService;
 
+    /**
+     * Crea el modelo del servidor con los parámetros de conexión.
+     *
+     * @param ip          dirección IP del servidor
+     * @param port        puerto del registro RMI
+     * @param serviceName nombre base del servicio RMI
+     */
     public ServerModel(String ip, int port, String serviceName) {
-        this.ip = ip;
-        this.port = port;
+        this.ip          = ip;
+        this.port        = port;
         this.serviceName = serviceName;
-        this.uri = "//" + ip + ":" + port + "/" + serviceName;
+        this.uri         = "//" + ip + ":" + port + "/" + serviceName;
     }
 
+    /**
+     * Inicia el servidor: crea todos los servicios, levanta el registro RMI y los publica.
+     *
+     * @return {@code true} si el servidor se inició correctamente
+     */
     public boolean deploy() {
         try {
             System.setProperty("java.rmi.server.hostname", ip);
 
             cuadranteService = new CuadranteService();
-            orderService = new OrderService(cuadranteService);
-            deliveryService = new DeliveryService(cuadranteService, orderService);
-            userService = new UserService(orderService);
-            productService = new ProductService();
-            kitchenService = new KitchenService(orderService);
-            adminService = new AdminService(userService, productService, orderService);
+            orderService     = new OrderService(cuadranteService);
+            deliveryService  = new DeliveryService(cuadranteService, orderService);
+            userService      = new UserService(orderService);
+            productService   = new ProductService();
+            kitchenService   = new KitchenService(orderService);
+            adminService     = new AdminService(userService, productService, orderService);
 
             try {
                 registry = LocateRegistry.getRegistry(port);
@@ -63,12 +79,12 @@ public class ServerModel {
             }
 
             bindService("-cuadrantes", cuadranteService);
-            bindService("-delivery", deliveryService);
-            bindService("-users", userService);
-            bindService("-products", productService);
-            bindService("-orders", orderService);
-            bindService("-kitchen", kitchenService);
-            bindService("-admin", adminService);
+            bindService("-delivery",   deliveryService);
+            bindService("-users",      userService);
+            bindService("-products",   productService);
+            bindService("-orders",     orderService);
+            bindService("-kitchen",    kitchenService);
+            bindService("-admin",      adminService);
 
             running = true;
             return true;
@@ -77,6 +93,12 @@ public class ServerModel {
             return false;
         }
     }
+
+    /**
+     * Detiene el servidor: desenlaza los servicios del registro RMI y los libera.
+     *
+     * @return {@code true} si el servidor se detuvo correctamente
+     */
     public boolean stop() {
         try {
             Naming.unbind(uri + "-cuadrantes");
@@ -88,14 +110,13 @@ public class ServerModel {
             Naming.unbind(uri + "-admin");
 
             if (cuadranteService != null) UnicastRemoteObject.unexportObject(cuadranteService, true);
-            if (deliveryService != null) UnicastRemoteObject.unexportObject(deliveryService, true);
-            if (userService != null) UnicastRemoteObject.unexportObject(userService, true);
-            if (productService != null) UnicastRemoteObject.unexportObject(productService, true);
-            if (orderService != null) UnicastRemoteObject.unexportObject(orderService, true);
-            if (kitchenService != null) UnicastRemoteObject.unexportObject(kitchenService, true);
-            if (adminService != null) UnicastRemoteObject.unexportObject(adminService, true);
+            if (deliveryService  != null) UnicastRemoteObject.unexportObject(deliveryService,  true);
+            if (userService      != null) UnicastRemoteObject.unexportObject(userService,      true);
+            if (productService   != null) UnicastRemoteObject.unexportObject(productService,   true);
+            if (orderService     != null) UnicastRemoteObject.unexportObject(orderService,     true);
+            if (kitchenService   != null) UnicastRemoteObject.unexportObject(kitchenService,   true);
+            if (adminService     != null) UnicastRemoteObject.unexportObject(adminService,     true);
 
-            // Solo unexport si el registry fue creado por este proceso
             if (createdRegistry && registry != null) {
                 try {
                     UnicastRemoteObject.unexportObject(registry, true);
@@ -115,6 +136,7 @@ public class ServerModel {
         Naming.rebind(uri + suffix, UnicastRemoteObject.exportObject(service, 0));
     }
 
+    /** @return {@code true} si el servidor está activo y escuchando */
     public boolean isRunning() {
         return running;
     }

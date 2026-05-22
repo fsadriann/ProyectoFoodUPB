@@ -1,105 +1,166 @@
 package edu.fsadriann.server.model.user;
 
 import com.google.gson.*;
-import com.google.gson.reflect.TypeToken;
+
+import edu.fsadriann.app.linkedlist.singly.singly.LinkedList;
+import edu.fsadriann.model.iterator.Iterator;
 
 import java.io.*;
-import java.lang.reflect.Type;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
 
+/**
+ * Repositorio para la persistencia de usuarios y credenciales en archivos JSON.
+ * Los usuarios se guardan sin la lista de favoritos para evitar conflictos con la estructura de datos del JAR.
+ */
 public class UserRepository {
 
     private static final String USERS_FILE = "data/users.json";
     private static final String CREDS_FILE = "data/credentials.json";
 
-    // Excluye favProductos para evitar problemas con la LinkedList del JAR
     private final Gson gson = new GsonBuilder()
             .setPrettyPrinting()
             .excludeFieldsWithoutExposeAnnotation()
             .create();
 
-    // Gson sin restricciones para credenciales (son POJOs simples)
     private final Gson gsonSimple = new GsonBuilder().setPrettyPrinting().create();
 
-    // ── Usuarios ─────────────────────────────────────────────────────────────
-
-    public List<User> findAllUsers() {
-        return readList(USERS_FILE, new TypeToken<List<User>>(){}.getType(), gson);
+    /**
+     * Retorna todos los usuarios del archivo JSON.
+     *
+     * @return lista de usuarios
+     */
+    public LinkedList<User> findAllUsers() {
+        return readList(USERS_FILE, User.class, gson);
     }
 
-    public void saveAllUsers(List<User> users) {
+    /**
+     * Guarda la lista completa de usuarios en el archivo JSON.
+     *
+     * @param users lista de usuarios a guardar
+     */
+    public void saveAllUsers(LinkedList<User> users) {
         writeList(USERS_FILE, users, gson);
     }
 
+    /**
+     * Guarda o actualiza un usuario en el archivo JSON.
+     *
+     * @param user usuario a guardar
+     */
     public void saveUser(User user) {
-        List<User> lista = findAllUsers();
-        lista.removeIf(u -> u.getCedula().equals(user.getCedula()));
+        LinkedList<User> lista = findAllUsers();
+        lista.remove(u -> u.getCedula().equals(user.getCedula()));
         lista.add(user);
         saveAllUsers(lista);
     }
 
+    /**
+     * Elimina un usuario del archivo JSON por su cédula.
+     *
+     * @param cedula cédula del usuario a eliminar
+     */
     public void deleteUser(String cedula) {
-        List<User> lista = findAllUsers();
-        lista.removeIf(u -> u.getCedula().equals(cedula));
+        LinkedList<User> lista = findAllUsers();
+        lista.remove(u -> u.getCedula().equals(cedula));
         saveAllUsers(lista);
     }
 
-    // ── Credenciales ─────────────────────────────────────────────────────────
-
-    public List<CredentialEntry> findAllCredentials() {
-        return readList(CREDS_FILE, new TypeToken<List<CredentialEntry>>(){}.getType(), gsonSimple);
+    /**
+     * Retorna todas las credenciales almacenadas.
+     *
+     * @return lista de entradas de credenciales
+     */
+    public LinkedList<CredentialEntry> findAllCredentials() {
+        return readList(CREDS_FILE, CredentialEntry.class, gsonSimple);
     }
 
+    /**
+     * Guarda o actualiza la contraseña de un usuario.
+     *
+     * @param cedula     cédula del usuario
+     * @param contrasena contraseña a guardar
+     */
     public void saveCredential(String cedula, String contrasena) {
-        List<CredentialEntry> lista = findAllCredentials();
-        lista.removeIf(c -> c.cedula.equals(cedula));
+        LinkedList<CredentialEntry> lista = findAllCredentials();
+        lista.remove(c -> c.cedula.equals(cedula));
         lista.add(new CredentialEntry(cedula, contrasena));
         writeList(CREDS_FILE, lista, gsonSimple);
     }
 
+    /**
+     * Obtiene la contraseña almacenada de un usuario.
+     *
+     * @param cedula cédula del usuario
+     * @return contraseña almacenada, o {@code null} si no existe
+     */
     public String getContrasena(String cedula) {
-        return findAllCredentials().stream()
-                .filter(c -> c.cedula.equals(cedula))
-                .map(c -> c.contrasena)
-                .findFirst()
-                .orElse(null);
+        Iterator<CredentialEntry> it = findAllCredentials().iterator();
+        while (it.hasNext()) {
+            CredentialEntry c = it.next();
+            if (c != null && c.cedula.equals(cedula)) return c.contrasena;
+        }
+        return null;
     }
 
+    /**
+     * Elimina las credenciales de un usuario.
+     *
+     * @param cedula cédula del usuario
+     */
     public void deleteCredential(String cedula) {
-        List<CredentialEntry> lista = findAllCredentials();
-        lista.removeIf(c -> c.cedula.equals(cedula));
+        LinkedList<CredentialEntry> lista = findAllCredentials();
+        lista.remove(c -> c.cedula.equals(cedula));
         writeList(CREDS_FILE, lista, gsonSimple);
     }
 
-    // ── CredentialEntry (clase interna pública para Gson) ─────────────────────
-
+    /**
+     * Representa las credenciales de acceso de un usuario (cédula + contraseña).
+     */
     public static class CredentialEntry {
+
+        /** Cédula del usuario. */
         public String cedula;
+
+        /** Contraseña de acceso. */
         public String contrasena;
 
+        /**
+         * Crea una entrada de credenciales.
+         *
+         * @param cedula     cédula del usuario
+         * @param contrasena contraseña de acceso
+         */
         public CredentialEntry(String cedula, String contrasena) {
-            this.cedula = cedula;
+            this.cedula     = cedula;
             this.contrasena = contrasena;
         }
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private <T> List<T> readList(String fileName, Type type, Gson g) {
+    private <T> LinkedList<T> readList(String fileName, Class<T> elementClass, Gson g) {
         try (Reader reader = new FileReader(getFile(fileName))) {
-            List<T> lista = g.fromJson(reader, type);
-            return lista != null ? lista : new ArrayList<>();
+            JsonArray array = g.fromJson(reader, JsonArray.class);
+            LinkedList<T> lista = new LinkedList<>();
+            if (array != null) {
+                for (int i = 0; i < array.size(); i++) {
+                    lista.add(g.fromJson(array.get(i), elementClass));
+                }
+            }
+            return lista;
         } catch (IOException e) {
             System.err.println("Error leyendo " + fileName + ": " + e.getMessage());
-            return new ArrayList<>();
+            return new LinkedList<>();
         }
     }
 
-    private <T> void writeList(String fileName, List<T> items, Gson g) {
+    private <T> void writeList(String fileName, LinkedList<T> items, Gson g) {
+        JsonArray array = new JsonArray();
+        Iterator<T> it = items.iterator();
+        while (it.hasNext()) {
+            T item = it.next();
+            if (item != null) array.add(g.toJsonTree(item));
+        }
         try (Writer writer = new FileWriter(getFile(fileName))) {
-            g.toJson(items, writer);
+            g.toJson(array, writer);
         } catch (IOException e) {
             System.err.println("Error guardando " + fileName + ": " + e.getMessage());
         }

@@ -7,17 +7,13 @@ import edu.fsadriann.app.linkedlist.singly.singly.LinkedList;
 import edu.fsadriann.view.operator.OperatorView;
 
 import javax.swing.table.DefaultTableModel;
-import java.util.ArrayList;
-import java.util.List;
 
 public class ProductController {
 
 	private final OperatorModel  model;
 	private final OperatorView view;
 
-	// Cache local de los productos mostrados en productsTable.
-	// El índice coincide con la fila del DefaultTableModel.
-	private final List<Product> displayedProducts = new ArrayList<>();
+	private final LinkedList<Product> displayedProducts = new LinkedList<>();
 
 	public ProductController(OperatorModel model, OperatorView view) {
 		this.model = model;
@@ -68,10 +64,9 @@ public class ProductController {
 	// ─────────────────────────────────────────────────────────────────────────
 
 	public Product getDisplayedProduct(int row) {
-		if (row < 0 || row >= displayedProducts.size()) {
-			return null;
-		}
-		return displayedProducts.get(row);
+		if (row < 0 || row >= displayedProducts.size()) return null;
+		Object[] arr = displayedProducts.toArray();
+		return (Product) arr[row];
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────

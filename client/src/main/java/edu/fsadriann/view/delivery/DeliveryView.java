@@ -161,7 +161,6 @@ public class DeliveryView extends JFrame {
         assignedOrdersBody.setBackground(BG);
         assignedOrdersBody.setBorder(new EmptyBorder(0, 8, 8, 8));
 
-        // Wrapper que empuja tarjetas al norte para que no se estiren verticalmente
         JPanel wrapper = new JPanel(new BorderLayout());
         wrapper.setBackground(BG);
         wrapper.add(header, BorderLayout.NORTH);
@@ -176,15 +175,21 @@ public class DeliveryView extends JFrame {
         return scroll;
     }
 
-    public void addGroupCard(String repartidor, java.util.List<String> orderIds,
-                             java.util.List<String> clientes, java.util.List<String> cuadrantes,
+    public void addGroupCard(String repartidor,
+                             edu.fsadriann.app.linkedlist.singly.singly.LinkedList<String> orderIds,
+                             edu.fsadriann.app.linkedlist.singly.singly.LinkedList<String> clientes,
+                             edu.fsadriann.app.linkedlist.singly.singly.LinkedList<String> cuadrantes,
                              EstadoPedido estado, Runnable onIniciarTodas,
-                             java.util.List<Runnable> onEntregadoIndividual) {
+                             edu.fsadriann.app.linkedlist.singly.singly.LinkedList<Runnable> onEntregadoIndividual) {
         SwingUtilities.invokeLater(() -> {
             boolean enCamino = estado == EstadoPedido.EN_CAMINO;
             Color bordeColor = enCamino ? BLUE : GREEN;
 
-            // Tarjeta contenedora del grupo
+            Object[] idsArr      = orderIds  != null ? orderIds.toArray()   : new Object[0];
+            Object[] clientesArr = clientes  != null ? clientes.toArray()   : new Object[0];
+            Object[] cuadsArr    = cuadrantes != null ? cuadrantes.toArray() : new Object[0];
+            Object[] accionesArr = onEntregadoIndividual != null ? onEntregadoIndividual.toArray() : null;
+
             JPanel card = new JPanel();
             card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
             card.setBackground(BG);
@@ -196,7 +201,6 @@ public class DeliveryView extends JFrame {
                             new LineBorder(BORDER_C),
                             new EmptyBorder(10, 10, 10, 10))));
 
-            // Encabezado del grupo: repartidor
             JLabel repLbl = new JLabel("Repartidor: " + repartidor);
             repLbl.setFont(new Font("SansSerif", Font.BOLD, 12));
             repLbl.setForeground(BLUE);
@@ -204,7 +208,6 @@ public class DeliveryView extends JFrame {
             card.add(repLbl);
             card.add(Box.createVerticalStrut(6));
 
-            // Línea separadora
             JPanel line = new JPanel();
             line.setBackground(BORDER_C);
             line.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
@@ -212,11 +215,10 @@ public class DeliveryView extends JFrame {
             card.add(line);
             card.add(Box.createVerticalStrut(6));
 
-            // Un sub-item por cada pedido del grupo
-            for (int i = 0; i < orderIds.size(); i++) {
-                String orderId  = orderIds.get(i);
-                String cliente  = i < clientes.size()   ? clientes.get(i)   : "—";
-                String cuadrante= i < cuadrantes.size() ? cuadrantes.get(i) : "—";
+            for (int i = 0; i < idsArr.length; i++) {
+                String orderId   = (String) idsArr[i];
+                String cliente   = i < clientesArr.length ? (String) clientesArr[i] : "—";
+                String cuadrante = i < cuadsArr.length    ? (String) cuadsArr[i]    : "—";
 
                 JPanel item = new JPanel(new BorderLayout(6, 0));
                 item.setOpaque(false);
@@ -239,9 +241,8 @@ public class DeliveryView extends JFrame {
                 itemLeft.add(cuadLbl);
                 item.add(itemLeft, BorderLayout.CENTER);
 
-                // Botón individual "Entregado" solo si está en camino
-                if (enCamino && onEntregadoIndividual != null && i < onEntregadoIndividual.size()) {
-                    final Runnable accion = onEntregadoIndividual.get(i);
+                if (enCamino && accionesArr != null && i < accionesArr.length) {
+                    final Runnable accion = (Runnable) accionesArr[i];
                     JButton btnEnt = actionBtn("✓", BLUE, Color.WHITE);
                     btnEnt.setMaximumSize(new Dimension(36, 28));
                     btnEnt.setToolTipText("Marcar como entregado");
@@ -255,10 +256,9 @@ public class DeliveryView extends JFrame {
 
             card.add(Box.createVerticalStrut(6));
 
-            // Botón principal del grupo
             if (!enCamino && onIniciarTodas != null) {
                 JButton btnIniciar = actionBtn(
-                        "Iniciar entrega (" + orderIds.size() + " pedidos)", GREEN, Color.WHITE);
+                        "Iniciar entrega (" + idsArr.length + " pedidos)", GREEN, Color.WHITE);
                 btnIniciar.addActionListener(e -> onIniciarTodas.run());
                 card.add(btnIniciar);
             }
@@ -537,7 +537,7 @@ public class DeliveryView extends JFrame {
                 routeBody.repaint();
                 return;
             }
-            java.util.List<String> routeList = new java.util.ArrayList<>();
+            LinkedList<String> routeList = new LinkedList<>();
             edu.fsadriann.model.iterator.Iterator<String> itG = ruta.iterator();
             while (itG.hasNext()) { String n = itG.next(); if (n != null) routeList.add(n); }
             graphPanel.setRoute(routeList);
@@ -706,11 +706,11 @@ public class DeliveryView extends JFrame {
         private static final Color COL_BG_PANEL = Color.WHITE;
         private static final int   R            = 22;
 
-        private final java.util.List<GraphNode>        nodes         = new java.util.ArrayList<>();
-        private final java.util.List<GraphEdge>        edges         = new java.util.ArrayList<>();
+        private final LinkedList<GraphNode>            nodes         = new LinkedList<>();
+        private final LinkedList<GraphEdge>            edges         = new LinkedList<>();
         private final java.util.Map<String, GraphNode> nodeMap       = new java.util.HashMap<>();
         private final java.util.Set<String>            routeEdgeKeys = new java.util.HashSet<>();
-        private final java.util.List<String>           routeOrder    = new java.util.ArrayList<>();
+        private final LinkedList<String>               routeOrder    = new LinkedList<>();
 
         GraphPanel() {
             setBackground(COL_BG_PANEL);
@@ -733,8 +733,10 @@ public class DeliveryView extends JFrame {
             if (!nodeMap.containsKey(from) || !nodeMap.containsKey(to)) return;
             // Evitar aristas duplicadas (el grafo no dirigido agrega A→B y B→A)
             String key = edgeKey(from, to);
-            for (GraphEdge e : edges) {
-                if (edgeKey(e.from, e.to).equals(key)) return;
+            edu.fsadriann.model.iterator.Iterator<GraphEdge> itE = edges.iterator();
+            while (itE.hasNext()) {
+                GraphEdge e = itE.next();
+                if (e != null && edgeKey(e.from, e.to).equals(key)) return;
             }
             edges.add(new GraphEdge(from, to, distKm));
             repaint();
@@ -745,12 +747,14 @@ public class DeliveryView extends JFrame {
             if (n != null) { n.orders = orders; repaint(); }
         }
 
-        void setRoute(java.util.List<String> route) {
+        void setRoute(LinkedList<String> route) {
             routeEdgeKeys.clear();
             routeOrder.clear();
-            routeOrder.addAll(route);
-            for (int i = 0; i < route.size() - 1; i++)
-                routeEdgeKeys.add(edgeKey(route.get(i), route.get(i + 1)));
+            edu.fsadriann.model.iterator.Iterator<String> itAdd = route.iterator();
+            while (itAdd.hasNext()) { String s = itAdd.next(); if (s != null) routeOrder.add(s); }
+            Object[] routeArr = route.toArray();
+            for (int i = 0; i < routeArr.length - 1; i++)
+                routeEdgeKeys.add(edgeKey((String) routeArr[i], (String) routeArr[i + 1]));
             repaint();
         }
 
@@ -783,7 +787,10 @@ public class DeliveryView extends JFrame {
             int drawW = w - PAD * 2;
             int drawH = h - PAD * 2 - LEGH;
 
-            for (GraphNode n : nodes) {
+            edu.fsadriann.model.iterator.Iterator<GraphNode> itN = nodes.iterator();
+            while (itN.hasNext()) {
+                GraphNode n = itN.next();
+                if (n == null) continue;
                 String key = normalize(n.id);
                 double[] pos = GEO_COORDS.get(key);
                 if (pos != null) {
@@ -801,9 +808,10 @@ public class DeliveryView extends JFrame {
             final int MIN_DIST = 52, ITERS = 80;
             for (int iter = 0; iter < ITERS; iter++) {
                 boolean moved = false;
-                for (int i = 0; i < nodes.size(); i++) {
-                    for (int j = i + 1; j < nodes.size(); j++) {
-                        GraphNode a = nodes.get(i), b = nodes.get(j);
+                Object[] nodesArr = nodes.toArray();
+                for (int i = 0; i < nodesArr.length; i++) {
+                    for (int j = i + 1; j < nodesArr.length; j++) {
+                        GraphNode a = (GraphNode) nodesArr[i], b = (GraphNode) nodesArr[j];
                         int dx = b.px - a.px, dy = b.py - a.py;
                         double dist = Math.sqrt(dx * dx + dy * dy);
                         if (dist < MIN_DIST && dist > 0) {
@@ -863,7 +871,10 @@ public class DeliveryView extends JFrame {
             // Set para no dibujar la misma arista dos veces (grafo no dirigido)
             java.util.Set<String> drawn = new java.util.HashSet<>();
 
-            for (GraphEdge e : edges) {
+            edu.fsadriann.model.iterator.Iterator<GraphEdge> itDE = edges.iterator();
+            while (itDE.hasNext()) {
+                GraphEdge e = itDE.next();
+                if (e == null) continue;
                 String key = edgeKey(e.from, e.to);
                 if (!drawn.add(key)) continue; // ya dibujada
 
@@ -902,7 +913,10 @@ public class DeliveryView extends JFrame {
         }
 
         private void drawNodes(Graphics2D g) {
-            for (GraphNode n : nodes) {
+            edu.fsadriann.model.iterator.Iterator<GraphNode> itDN = nodes.iterator();
+            while (itDN.hasNext()) {
+                GraphNode n = itDN.next();
+                if (n == null) continue;
                 boolean enRuta = routeOrder.contains(n.id);
 
                 Color fillColor   = n.origin ? new Color(230, 241, 251)

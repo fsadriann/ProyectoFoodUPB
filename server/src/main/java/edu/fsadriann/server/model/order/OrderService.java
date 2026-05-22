@@ -7,31 +7,39 @@ import edu.fsadriann.model.iterator.Iterator;
 
 import java.rmi.RemoteException;
 
+/**
+ * Servicio que gestiona el ciclo de vida de los pedidos en Food UPB.
+ * Calcula facturas con IVA y costo de domicilio según la distancia al cuadrante destino.
+ */
 public class OrderService implements OrderInterface {
 
     private static final double IVA              = 0.19;
-    private static final double COSTO_DOMI_STD   = 5_000.0;  // fallback si no hay cuadrante
-    private static final double TARIFA_BASE_DOMI = 2_000.0;  // COP base
-    private static final double TARIFA_POR_KM    = 800.0;    // COP por km
+    private static final double COSTO_DOMI_STD   = 5_000.0;
+    private static final double TARIFA_BASE_DOMI = 2_000.0;
+    private static final double TARIFA_POR_KM    = 800.0;
 
     static final String ORIGEN_BASE = "UPB";
 
-    private final LinkedList<Order>  pedidos;
-    private final CuadranteService   cuadranteService; // inyectado para calcular distancias
-
-    // ── Constructor ───────────────────────────────────────────────────────────
+    private final LinkedList<Order> pedidos;
+    private final CuadranteService  cuadranteService;
 
     /**
-     * @param cuadranteService servicio de cuadrantes ya inicializado en el servidor.
-     *                         Se usa para calcular el costo de domicilio por distancia.
+     * Crea el servicio de pedidos con el servicio de cuadrantes para calcular domicilios.
+     *
+     * @param cuadranteService servicio de cuadrantes para obtener distancias reales
      */
     public OrderService(CuadranteService cuadranteService) {
         this.pedidos          = new LinkedList<>();
         this.cuadranteService = cuadranteService;
     }
 
-    // ── Creación ──────────────────────────────────────────────────────────────
-
+    /**
+     * Crea un nuevo pedido en estado PENDIENTE para el cliente indicado.
+     *
+     * @param cedulaCliente cédula del cliente
+     * @param isPremium     {@code true} si el cliente tiene membresía premium
+     * @return el pedido creado
+     */
     @Override
     public Order crearPedido(String cedulaCliente, boolean isPremium) throws RemoteException {
         if (cedulaCliente == null || cedulaCliente.isBlank())
@@ -41,8 +49,12 @@ public class OrderService implements OrderInterface {
         return order;
     }
 
-    // ── Cocina ────────────────────────────────────────────────────────────────
-
+    /**
+     * Envía un pedido pendiente a cocina, cambiando su estado a EN_PREPARACION.
+     * El pedido debe tener al menos un producto y estar en estado PENDIENTE.
+     *
+     * @param pedido pedido a enviar
+     */
     @Override
     public void enviarPedidoACocina(Order pedido) throws RemoteException {
         if (pedido == null) throw new IllegalArgumentException("Pedido nulo.");
@@ -62,8 +74,13 @@ public class OrderService implements OrderInterface {
         actualizar(serverPedido);
     }
 
-    // ── Productos del carrito ─────────────────────────────────────────────────
-
+    /**
+     * Agrega un producto al carrito del pedido (solo si está en estado PENDIENTE).
+     *
+     * @param pedidoId identificador del pedido
+     * @param product  producto a agregar
+     * @return {@code true} si se agregó exitosamente
+     */
     @Override
     public boolean agregarProducto(String pedidoId, Product product) throws RemoteException {
         Order pedido = buscarPedido(pedidoId);
@@ -74,6 +91,13 @@ public class OrderService implements OrderInterface {
         return actualizar(pedido);
     }
 
+    /**
+     * Quita un producto del carrito del pedido (solo si está en estado PENDIENTE).
+     *
+     * @param pedidoId identificador del pedido
+     * @param product  producto a quitar
+     * @return {@code true} si se quitó exitosamente
+     */
     @Override
     public boolean quitarProducto(String pedidoId, Product product) throws RemoteException {
         Order pedido = buscarPedido(pedidoId);
@@ -81,7 +105,6 @@ public class OrderService implements OrderInterface {
         if (pedido.getEstado() != EstadoPedido.PENDIENTE)
             throw new IllegalStateException("Solo se quitan productos en PENDIENTE.");
 
-        // Buscar la referencia real dentro del carrito del servidor
         Product enServidor = null;
         Iterator<Product> it = pedido.getCarrito().iterator();
         while (it.hasNext()) {
@@ -98,6 +121,14 @@ public class OrderService implements OrderInterface {
         return removed;
     }
 
+    /**
+     * Cambia la cantidad de un producto dentro del carrito (solo en estado PENDIENTE).
+     *
+     * @param pedidoId     identificador del pedido
+     * @param productoId   identificador del producto
+     * @param nuevaCantidad nueva cantidad deseada
+     * @return {@code true} si se actualizó exitosamente
+     */
     @Override
     public boolean cambiarCantidadProducto(String pedidoId, String productoId,
                                            int nuevaCantidad) throws RemoteException {
@@ -117,14 +148,13 @@ public class OrderService implements OrderInterface {
         return false;
     }
 
-    // ── Factura ───────────────────────────────────────────────────────────────
-
     /**
-     * Calcula la factura completa del pedido.
-     * El costo de domicilio se calcula usando la distancia real al cuadrante destino:
-     *   costo = TARIFA_BASE + (distanciaKm × TARIFA_POR_KM)
+     * Calcula la factura del pedido: subtotal + IVA (19%) + costo de domicilio.
      * Si el cliente es premium, el domicilio es gratis.
-     * Si el cuadrante destino no está asignado, se usa el costo estándar como fallback.
+     * Si hay cuadrante asignado, el costo se calcula por distancia real desde UPB.
+     *
+     * @param pedido pedido a facturar
+     * @return valor total en pesos colombianos
      */
     @Override
     public double calcularFactura(Order pedido) throws RemoteException {
@@ -134,7 +164,6 @@ public class OrderService implements OrderInterface {
         if (serverPedido == null)
             throw new IllegalArgumentException("Pedido no encontrado: " + pedido.getOrderId());
 
-        // Subtotal
         double subtotal = 0.0;
         Iterator<Product> it = serverPedido.getCarrito().iterator();
         while (it.hasNext()) {
@@ -156,15 +185,6 @@ public class OrderService implements OrderInterface {
         return total;
     }
 
-    /**
-     * Calcula el costo de domicilio según el cuadrante destino del pedido.
-     *
-     * <ul>
-     *   <li>Premium → siempre gratis.</li>
-     *   <li>Sin cuadrante asignado → tarifa estándar ({@value #COSTO_DOMI_STD} COP).</li>
-     *   <li>Con cuadrante → tarifa base + distancia × tarifa por km.</li>
-     * </ul>
-     */
     private double calcularCostoDomicilio(Order pedido) {
         if (pedido.isPremium()) return 0.0;
 
@@ -176,12 +196,17 @@ public class OrderService implements OrderInterface {
             if (distKm <= 0) return COSTO_DOMI_STD;
             return TARIFA_BASE_DOMI + (distKm * TARIFA_POR_KM);
         } catch (Exception e) {
-            return COSTO_DOMI_STD; // fallback ante cualquier error del grafo
+            return COSTO_DOMI_STD;
         }
     }
 
-    // ── Cuadrante destino ─────────────────────────────────────────────────────
-
+    /**
+     * Asigna el cuadrante de destino a un pedido para el cálculo de la ruta de entrega.
+     *
+     * @param orderId         identificador del pedido
+     * @param nombreCuadrante nombre del cuadrante de destino
+     * @return {@code true} si se asignó exitosamente
+     */
     @Override
     public boolean asignarCuadranteDestino(String orderId, String nombreCuadrante) {
         if (nombreCuadrante == null || nombreCuadrante.isBlank())
@@ -200,12 +225,11 @@ public class OrderService implements OrderInterface {
         }
     }
 
-    // ── Ruta de entrega ───────────────────────────────────────────────────────
-
     /**
-     * Calcula la ruta óptima desde UPB hasta el cuadrante destino del pedido
-     * usando Dijkstra a través del {@link CuadranteService}.
-     * Si el cuadrante no está asignado, devuelve null.
+     * Calcula la ruta más corta desde UPB hasta el cuadrante destino del pedido.
+     *
+     * @param orderId identificador del pedido
+     * @return lista de cuadrantes en la ruta, o {@code null} si no hay cuadrante asignado
      */
     @Override
     public LinkedList<String> calcularRutaEntrega(String orderId) {
@@ -218,15 +242,18 @@ public class OrderService implements OrderInterface {
             String destino = pedido.getCuadranteDestino();
             if (destino == null || destino.isBlank()) return null;
 
-            // Usar Dijkstra real en lugar de lista de dos nodos
             return cuadranteService.calcularRutaMasCorta(ORIGEN_BASE, destino);
         } catch (Exception e) {
             return null;
         }
     }
 
-    // ── Estados del pedido ────────────────────────────────────────────────────
-
+    /**
+     * Actualiza los datos de un pedido en estado PENDIENTE.
+     *
+     * @param pedido pedido con datos actualizados
+     * @return {@code true} si se modificó exitosamente
+     */
     @Override
     public boolean modificarPedido(Order pedido) throws RemoteException {
         if (pedido == null) return false;
@@ -236,6 +263,12 @@ public class OrderService implements OrderInterface {
         return actualizar(pedido);
     }
 
+    /**
+     * Cancela un pedido que aún no haya sido despachado.
+     *
+     * @param pedidoId identificador del pedido
+     * @return {@code true} si se canceló exitosamente
+     */
     @Override
     public boolean cancelarPedido(String pedidoId) throws RemoteException {
         Order pedido = buscarPedido(pedidoId);
@@ -251,6 +284,12 @@ public class OrderService implements OrderInterface {
         return actualizar(pedido);
     }
 
+    /**
+     * Cambia el estado del pedido a EN_CAMINO (pedido en trayecto de entrega).
+     *
+     * @param orderId identificador del pedido
+     * @return {@code true} si el cambio fue exitoso
+     */
     @Override
     public boolean marcarEnCamino(String orderId) {
         if (orderId == null) return false;
@@ -268,6 +307,12 @@ public class OrderService implements OrderInterface {
         }
     }
 
+    /**
+     * Cambia el estado del pedido a ENTREGADO.
+     *
+     * @param orderId identificador del pedido
+     * @return {@code true} si el cambio fue exitoso
+     */
     @Override
     public boolean marcarEntregado(String orderId) {
         if (orderId == null) return false;
@@ -285,6 +330,12 @@ public class OrderService implements OrderInterface {
         }
     }
 
+    /**
+     * Cambia el estado del pedido a LISTO (pedido preparado en cocina).
+     *
+     * @param orderId identificador del pedido
+     * @return {@code true} si el cambio fue exitoso
+     */
     @Override
     public boolean marcarListo(String orderId) {
         if (orderId == null) return false;
@@ -302,8 +353,12 @@ public class OrderService implements OrderInterface {
         }
     }
 
-    // ── Consultas ─────────────────────────────────────────────────────────────
-
+    /**
+     * Busca un pedido por su identificador único.
+     *
+     * @param pedidoId identificador del pedido
+     * @return el pedido encontrado, o {@code null} si no existe
+     */
     @Override
     public Order buscarPedido(String pedidoId) throws RemoteException {
         if (pedidoId == null) return null;
@@ -315,6 +370,12 @@ public class OrderService implements OrderInterface {
         return null;
     }
 
+    /**
+     * Retorna todos los pedidos de un cliente.
+     *
+     * @param cedula cédula del cliente
+     * @return lista de pedidos del cliente
+     */
     @Override
     public LinkedList<Order> getPedidosPorCliente(String cedula) throws RemoteException {
         LinkedList<Order> resultado = new LinkedList<>();
@@ -327,6 +388,11 @@ public class OrderService implements OrderInterface {
         return resultado;
     }
 
+    /**
+     * Retorna los pedidos actualmente en preparación en cocina.
+     *
+     * @return lista de pedidos con estado EN_PREPARACION
+     */
     @Override
     public LinkedList<Order> getPedidosEnPreparacion() throws RemoteException {
         LinkedList<Order> resultado = new LinkedList<>();
@@ -338,16 +404,16 @@ public class OrderService implements OrderInterface {
         return resultado;
     }
 
+    /** @return lista completa de todos los pedidos */
     @Override
     public LinkedList<Order> listarTodosPedidos() throws RemoteException {
         return pedidos;
     }
 
+    /** @return lista completa de todos los pedidos (acceso sin RemoteException) */
     public LinkedList<Order> listarTodosLosPedidos() {
         return pedidos;
     }
-
-    // ── Helper privado ────────────────────────────────────────────────────────
 
     private boolean actualizar(Order order) {
         boolean removed = pedidos.remove(o -> order.getOrderId().equals(o.getOrderId()));
