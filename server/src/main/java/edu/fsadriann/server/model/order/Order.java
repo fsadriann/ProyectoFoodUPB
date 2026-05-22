@@ -54,7 +54,7 @@
         /**
          * Cuadrante de destino para la entrega. RF-13.
          * {@code null} hasta que {@code OrderService.asignarCuadranteDestino} lo establezca.
-         * Clave de búsqueda en el {@code matrixGraph<String>} de {@code CuadranteService}.
+         * Clave de búsqueda en el {@code Graph<String>} de {@code CuadranteService}.
          */
         private String cuadranteDestino;
 

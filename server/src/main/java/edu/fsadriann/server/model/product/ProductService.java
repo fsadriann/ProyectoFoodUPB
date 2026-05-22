@@ -36,12 +36,11 @@ public class ProductService implements ProductInterface {
     @Override
     public boolean editarProducto(Product product) throws RemoteException {
         if (product == null || product.getProductoId() == null) return false;
-        boolean removed = catalogo.remove(p -> product.getProductoId().equals(p.getProductoId()));
-        if (removed) {
-            catalogo.add(product);
-            repository.save(product);
-        }
-        return removed;
+        if (buscarProducto(product.getProductoId()) == null) return false;
+        catalogo.remove(p -> product.getProductoId().equals(p.getProductoId()));
+        catalogo.add(product);
+        repository.save(product);
+        return true;
     }
 
     @Override

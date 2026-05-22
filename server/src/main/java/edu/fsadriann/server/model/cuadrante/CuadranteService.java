@@ -1,6 +1,6 @@
 package edu.fsadriann.server.model.cuadrante;
 
-import edu.fsadriann.app.graph.matrixGraph;
+import edu.fsadriann.app.graph.Graph;
 import edu.fsadriann.app.linkedlist.singly.singly.LinkedList;
 import edu.fsadriann.model.iterator.Iterator;
 
@@ -12,12 +12,12 @@ public class CuadranteService implements CuadranteInterface {
     private static final String NODO_ORIGEN   = "UPB";
 
 
-    private final matrixGraph<String>   mapa;
+    private final Graph<String>   mapa;
     private final LinkedList<Cuadrante> cuadrantes;
     private final CuadranteRepository  repository = new CuadranteRepository();
 
     public CuadranteService() {
-        this.mapa       = new matrixGraph<>(CAPACIDAD_MAX);
+        this.mapa       = new Graph<>(CAPACIDAD_MAX);
         this.cuadrantes = new LinkedList<>();
         cargarDatos();
     }
@@ -35,7 +35,6 @@ public class CuadranteService implements CuadranteInterface {
         }
     }
 
-    // ── CRUD ──────────────────────────────────────────────────────────────────
 
     @Override
     public boolean agregarCuadrante(Cuadrante cuadrante) throws RemoteException {
@@ -74,18 +73,13 @@ public class CuadranteService implements CuadranteInterface {
     @Override
     public boolean eliminarCuadrante(String nombre) throws RemoteException {
         if (nombre == null || nombre.isBlank()) return false;
-        if (NODO_ORIGEN.equals(nombre)) return false; // UPB nunca se elimina
+        if (NODO_ORIGEN.equals(nombre)) return false;
         if (mapa.searchVertex(nombre) == -1) return false;
 
-        // 1. Persistir eliminación en JSON
         repository.deleteCuadrante(nombre);
         repository.deleteConexionesDe(nombre);
 
-        // 2. Eliminar del grafo — removeVortex elimina el nodo y todas sus aristas
         mapa.removeVortex(nombre);
-
-        // La lista en memoria (cuadrantes) no necesita modificarse:
-        // listarCuadrantes() filtra usando el grafo como fuente de verdad
         return true;
     }
 
@@ -100,10 +94,6 @@ public class CuadranteService implements CuadranteInterface {
         return null;
     }
 
-    /**
-     * Devuelve solo los cuadrantes que aún existen en el grafo.
-     * Así no se necesita remove() en LinkedList — el grafo es la fuente de verdad.
-     */
     @Override
     public LinkedList<Cuadrante> listarCuadrantes() throws RemoteException {
         LinkedList<Cuadrante> result = new LinkedList<>();
@@ -117,7 +107,6 @@ public class CuadranteService implements CuadranteInterface {
         return result;
     }
 
-    // ── Grafo — construcción ──────────────────────────────────────────────────
 
     @Override
     public boolean conectarCuadrantes(String nombreA, String nombreB, double distanciaKm) throws RemoteException {
@@ -146,7 +135,6 @@ public class CuadranteService implements CuadranteInterface {
         return result;
     }
 
-    // ── Grafo — rutas ─────────────────────────────────────────────────────────
 
     @Override
     public LinkedList<String> calcularRutaMasCorta(String origen, String destino) throws RemoteException {
@@ -185,8 +173,6 @@ public class CuadranteService implements CuadranteInterface {
         return mapa.getNeighbours(nombre);
     }
 
-    // ── Consultas ─────────────────────────────────────────────────────────────
-
     @Override
     public int numeroCuadrantes() throws RemoteException {
         return mapa.numberVertex();
@@ -201,8 +187,6 @@ public class CuadranteService implements CuadranteInterface {
     public String verMatrizAdyacencia() throws RemoteException {
         return mapa.seeMatAdj();
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private boolean validarNodos(String a, String b) {
         if (a == null || b == null) return false;

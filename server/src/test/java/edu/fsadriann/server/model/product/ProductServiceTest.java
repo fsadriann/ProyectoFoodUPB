@@ -15,6 +15,12 @@ class ProductServiceTest {
 
     @BeforeEach
     void setUp() {
+        ProductRepository repo = new ProductRepository();
+        for (String id : new String[]{
+                "prod-test-01", "prod-dup-01", "prod-upd-01",
+                "prod-del-01",  "prod-act-01", "prod-ina-01"}) {
+            repo.deleteById(id);
+        }
         service = new ProductService();
     }
 

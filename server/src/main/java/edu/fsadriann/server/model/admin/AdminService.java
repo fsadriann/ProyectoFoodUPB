@@ -125,7 +125,9 @@ public class AdminService implements AdminInterface {
                                             String filtroEstado,
                                             String filtroCuadrante) throws RemoteException {
         LinkedList<Order> resultado = new LinkedList<>();
-        for (Order o : pedidos.toArray()) {
+        Iterator<Order> it = pedidos.iterator();
+        while (it.hasNext()) {
+            Order o = it.next();
             if (o == null) continue;
             if (filtroEstado != null && !filtroEstado.isBlank()) {
                 if (o.getEstado() == null ||
@@ -174,7 +176,9 @@ public class AdminService implements AdminInterface {
 
     private User buscarPorCedula(String cedula) {
         if (cedula == null) return null;
-        for (User u : operadores.toArray()) {
+        Iterator<User> it = operadores.iterator();
+        while (it.hasNext()) {
+            User u = it.next();
             if (u != null && cedula.equals(u.getCedula())) return u;
         }
         return null;
